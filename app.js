@@ -495,13 +495,27 @@ async function fetchSheetData() {
         document.getElementById('syncStatusText');
 
     try {
-        const res =
-            await fetch(`${scriptUrl}?action=getdata`);
+        // ------------------------------------------------
+        // FORZAR ACTUALIZACIÓN
+        // Agregamos un parámetro único para evitar cache
+        // del navegador.
+        // ------------------------------------------------
+        const cacheBuster = Date.now();
+
+        const res = await fetch(
+            `${scriptUrl}?action=getdata&_=${cacheBuster}`,
+            {
+                method: 'GET',
+                cache: 'no-store'
+            }
+        );
 
         const data = await res.json();
 
         if (Array.isArray(data)) {
-            transactions = data.reverse();
+
+            transactions = [...data].reverse();
+
             members = [];
             debts = [];
 
@@ -511,35 +525,43 @@ async function fetchSheetData() {
                 "⚠️ Sincronizado (versión anterior de Apps Script)";
 
         } else if (data && typeof data === 'object') {
+
             warningBanner.classList.add('hidden');
 
             syncStatusText.textContent =
                 "🟢 Sincronizado correctamente con Google Sheets";
 
             if (Array.isArray(data.transactions)) {
-                transactions = data.transactions.reverse();
+                transactions =
+                    [...data.transactions].reverse();
             }
 
             if (Array.isArray(data.members)) {
-                members = data.members;
+                members = [...data.members];
             }
 
             if (Array.isArray(data.debts)) {
-                debts = data.debts.reverse();
+                debts =
+                    [...data.debts].reverse();
             }
 
             if (Array.isArray(data.attendance)) {
-                attendance = data.attendance.reverse();
+                attendance =
+                    [...data.attendance].reverse();
             }
         }
 
         renderApp();
 
     } catch (err) {
-        console.error("No se pudo sincronizar", err);
+
+        console.error(
+            "No se pudo sincronizar con Google Sheets:",
+            err
+        );
 
         enableDemoMode(
-            "💡 Modo Demo Activo (Previsualización local)"
+            "💡 No se pudo conectar con Google Sheets. Modo Demo Activo."
         );
     }
 }
@@ -2530,31 +2552,53 @@ function escapeHtml(text) {
 }
 
 /*
- * Inicialización
+ * ----------------------------------------------------
+ * INICIALIZACIÓN DE LA APP
+ * ----------------------------------------------------
  */
+
 setDefaultDate();
 
 document.addEventListener(
     'DOMContentLoaded',
-    () => {
+    async () => {
+
+        const loginScreen =
+            document.getElementById('loginScreen');
+
+        /*
+         * Si ya estaba logueado, entramos directamente
+         * y FORZAMOS la sincronización con Google Sheets.
+         */
         if (
             safeStorage.getItem('cc_logged') ===
             'true'
         ) {
-            document
-                .getElementById('loginScreen')
+
+            loginScreen
                 .classList
                 .add('hidden');
 
-            fetchSheetData();
+            /*
+             * IMPORTANTE:
+             * Cada apertura de la aplicación consulta
+             * nuevamente Google Sheets.
+             */
+            isDemoMode = false;
+
+            await fetchSheetData();
 
         } else {
-            enableDemoMode(
-                "💡 Puedes usar el Modo Demo o Iniciar Sesión"
-            );
 
-            document
-                .getElementById('loginScreen')
+            /*
+             * Primera apertura:
+             * mostramos login.
+             *
+             * NO cargamos datos Demo automáticamente,
+             * porque queremos que la aplicación intente
+             * trabajar con datos reales.
+             */
+            loginScreen
                 .classList
                 .remove('hidden');
         }
