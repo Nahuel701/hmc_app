@@ -28,3 +28,237 @@ border-radius: 8px;
 ::-webkit-scrollbar-thumb:hover {
 background: #94a3b8;
 }
+
+/* =========================================================
+   RESPONSIVE / MOBILE
+   ========================================================= */
+
+   html,
+   body {
+       width: 100%;
+       max-width: 100%;
+       overflow-x: hidden;
+   }
+   
+   * {
+       box-sizing: border-box;
+   }
+   
+   /* Evita que elementos flex provoquen overflow */
+   header,
+   main,
+   section,
+   div {
+       min-width: 0;
+   }
+   
+   /* Navegación superior */
+   .main-header-container {
+       width: 100%;
+   }
+   
+   /* Contenedor de tabs */
+   .main-tabs {
+       width: 100%;
+       min-width: 0;
+       overflow-x: auto;
+       overflow-y: hidden;
+       -webkit-overflow-scrolling: touch;
+       scrollbar-width: none;
+   }
+   
+   .main-tabs::-webkit-scrollbar {
+       display: none;
+   }
+   
+   .main-tabs button {
+       flex: 0 0 auto;
+       white-space: nowrap;
+   }
+   
+   /* Banner de conexión */
+   .connection-banner {
+       min-width: 0;
+   }
+   
+   .connection-banner-actions {
+       flex-wrap: wrap;
+   }
+   
+   /* Tablas: permiten desplazamiento horizontal solamente
+      cuando realmente la tabla es más ancha que el celular */
+   .table-responsive {
+       width: 100%;
+       max-width: 100%;
+       overflow-x: auto;
+       -webkit-overflow-scrolling: touch;
+   }
+   
+   /* Inputs y selects nunca deben superar el ancho disponible */
+   input,
+   select,
+   button,
+   textarea {
+       max-width: 100%;
+   }
+   
+   /* =========================================================
+      CELULARES
+      ========================================================= */
+   
+   @media (max-width: 640px) {
+   
+       /* Header */
+       .main-header-container {
+           padding: 12px;
+           gap: 12px;
+           align-items: stretch;
+       }
+   
+       .main-header-top {
+           width: 100%;
+           display: flex;
+           justify-content: space-between;
+           align-items: center;
+           gap: 8px;
+       }
+   
+       .main-header-brand {
+           min-width: 0;
+           flex: 1;
+       }
+   
+       .main-header-brand h1 {
+           font-size: 16px;
+           line-height: 1.2;
+       }
+   
+       .main-header-brand p {
+           font-size: 10px;
+       }
+   
+       .main-header-logout {
+           flex-shrink: 0;
+       }
+   
+       .main-header-logout button {
+           white-space: nowrap;
+           padding-left: 10px;
+           padding-right: 10px;
+       }
+   
+       /* Tabs */
+       .main-tabs {
+           display: flex;
+           width: calc(100% + 0px);
+           padding: 4px;
+           border-radius: 12px;
+       }
+   
+       .main-tabs button {
+           padding: 8px 12px;
+           font-size: 11px;
+       }
+   
+       /* Contenido principal */
+       main {
+           padding: 12px !important;
+       }
+   
+       /* Banner de conexión */
+       .connection-banner {
+           display: flex;
+           flex-direction: column;
+           align-items: stretch;
+           gap: 10px;
+           padding: 12px;
+       }
+   
+       .connection-banner-actions {
+           display: flex;
+           flex-direction: column;
+           align-items: stretch;
+           gap: 6px;
+       }
+   
+       .connection-banner-actions button {
+           width: 100%;
+           text-align: center;
+       }
+   
+       /* Cards */
+       .mobile-card {
+           padding: 16px !important;
+       }
+   
+       /* Evitar títulos demasiado grandes */
+       h1,
+       h2,
+       h3 {
+           max-width: 100%;
+       }
+   
+       /* Jueves Santo */
+       #tabJuevesSanto > div {
+           max-width: 100%;
+       }
+   
+       /* Tablas */
+       .table-responsive {
+           margin-left: 0;
+           margin-right: 0;
+       }
+   
+       .table-responsive table {
+           min-width: 600px;
+       }
+   
+       /* Tablas pequeñas */
+       #tabCargar,
+       #tabAsistencia,
+       #tabJuevesSanto {
+           width: 100%;
+           max-width: 100%;
+       }
+   
+       /* Botones de tipo */
+       #btnAporte,
+       #btnGasto,
+       #btnReintegro {
+           min-width: 0;
+           padding-left: 6px;
+           padding-right: 6px;
+           font-size: 11px;
+       }
+   
+       /* Formularios */
+       input,
+       select {
+           font-size: 16px !important;
+       }
+   
+       /* Esto evita que iOS haga zoom automático */
+       input[type="date"],
+       input[type="number"],
+       input[type="text"],
+       input[type="password"],
+       select {
+           font-size: 16px !important;
+       }
+   
+       /* Métricas */
+       #tabResumen .grid,
+       #tabDeudas .grid,
+       #tabAsistencia .grid,
+       #tabJuevesSanto .grid {
+           width: 100%;
+       }
+   
+       /* Cards de métricas */
+       #tabResumen .bg-white,
+       #tabDeudas .bg-white,
+       #tabAsistencia .bg-white,
+       #tabJuevesSanto .bg-white {
+           min-width: 0;
+       }
+   }
