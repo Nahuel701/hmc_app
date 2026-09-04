@@ -419,7 +419,8 @@ async function addTransaction(e) {
 
         if (
             currentType === 'gasto' ||
-            currentType === 'reintegro'
+            currentType === 'reintegro' ||
+            currentType === 'aporte'
         ) {
             debts.unshift(newTx);
         }
@@ -450,7 +451,7 @@ async function addTransaction(e) {
 
         setTimeout(() => {
             fetchSheetData();
-        }, 1000);
+        }, 100);
 
     } catch (err) {
         console.error(err);
@@ -464,7 +465,8 @@ async function addTransaction(e) {
 
         if (
             currentType === 'gasto' ||
-            currentType === 'reintegro'
+            currentType === 'reintegro' ||
+            currentType === 'aporte'
         ) {
             debts.unshift(newTx);
         }
@@ -548,6 +550,26 @@ async function fetchSheetData() {
             if (Array.isArray(data.attendance)) {
                 attendance =
                     [...data.attendance].reverse();
+            }
+
+            // Complementar debts con aportes registrados en Movimientos (transactions)
+            // para conciliar automáticamente registros previos de la planilla
+            if (Array.isArray(transactions)) {
+                transactions.forEach(tx => {
+                    if ((tx.tipo || '').toLowerCase() === 'aporte') {
+                        const existsInDebts = debts.some(d =>
+                            (d.tipo || '').toLowerCase() === 'aporte' &&
+                            d.persona === tx.persona &&
+                            parseFloat(d.monto) === parseFloat(tx.monto) &&
+                            normalizeDateKey(d.fecha) === normalizeDateKey(tx.fecha) &&
+                            (d.concepto || '').trim() === (tx.concepto || '').trim()
+                        );
+
+                        if (!existsInDebts) {
+                            debts.push(tx);
+                        }
+                    }
+                });
             }
         }
 
@@ -862,7 +884,8 @@ function renderApp() {
             debtMap[m] = {
                 adelantado: 0,
                 reintegrado: 0,
-                cuotas: 0
+                cuotas: 0,
+                aportes: 0
             };
         });
 
@@ -879,7 +902,8 @@ function renderApp() {
                 debtMap[d.persona] = {
                     adelantado: 0,
                     reintegrado: 0,
-                    cuotas: 0
+                    cuotas: 0,
+                    aportes: 0
                 };
             }
 
@@ -892,6 +916,9 @@ function renderApp() {
 
             } else if (tipo === 'cuota_jueves') {
                 debtMap[d.persona].cuotas += montoVal;
+
+            } else if (tipo === 'aporte') {
+                debtMap[d.persona].aportes += montoVal;
             }
 
             // Fila en Historial de Deudas
@@ -903,6 +930,9 @@ function renderApp() {
 
             const isCuota =
                 tipo === 'cuota_jueves';
+
+            const isAporte =
+                tipo === 'aporte';
 
             let tagLabel =
                 'GASTO ADELANTADO';
@@ -932,6 +962,16 @@ function renderApp() {
 
                 amountStyle =
                     'text-rose-600';
+
+            } else if (isAporte) {
+                tagLabel =
+                    'APORTE (PAGO CUOTA)';
+
+                tagStyle =
+                    'bg-emerald-100 text-emerald-800';
+
+                amountStyle =
+                    'text-emerald-600';
             }
 
             tr.innerHTML = `
@@ -983,12 +1023,12 @@ function renderApp() {
 
                 /*
                  * Balance Neto =
-                 * Gastos asumidos
+                 * (Gastos asumidos + Aportes realizados)
                  * - Reintegros recibidos
                  * - Cuotas adeudadas
                  *
                  * Si balanceNeto > 0:
-                 * El club le debe al miembro.
+                 * El club le debe al miembro (o miembro tiene saldo a favor).
                  *
                  * Si balanceNeto < 0:
                  * El miembro le debe al club.
@@ -997,7 +1037,8 @@ function renderApp() {
                  * Saldado.
                  */
                 const balanceNeto =
-                    info.adelantado -
+                    info.adelantado +
+                    info.aportes -
                     info.reintegrado -
                     info.cuotas;
 
@@ -1011,7 +1052,8 @@ function renderApp() {
                 if (
                     info.adelantado === 0 &&
                     info.reintegrado === 0 &&
-                    info.cuotas === 0
+                    info.cuotas === 0 &&
+                    info.aportes === 0
                 ) {
                     badge = `
                         <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600">
@@ -1770,7 +1812,8 @@ function calculateClubDebtToSettle() {
         debtMap[m] = {
             adelantado: 0,
             reintegrado: 0,
-            cuotas: 0
+            cuotas: 0,
+            aportes: 0
         };
     });
 
@@ -1785,7 +1828,8 @@ function calculateClubDebtToSettle() {
             debtMap[d.persona] = {
                 adelantado: 0,
                 reintegrado: 0,
-                cuotas: 0
+                cuotas: 0,
+                aportes: 0
             };
         }
 
@@ -1800,6 +1844,10 @@ function calculateClubDebtToSettle() {
         } else if (tipo === 'cuota_jueves') {
             debtMap[d.persona].cuotas +=
                 montoVal;
+
+        } else if (tipo === 'aporte') {
+            debtMap[d.persona].aportes +=
+                montoVal;
         }
     });
 
@@ -1807,7 +1855,8 @@ function calculateClubDebtToSettle() {
 
     Object.values(debtMap).forEach(info => {
         const bal =
-            info.adelantado -
+            info.adelantado +
+            info.aportes -
             info.reintegrado -
             info.cuotas;
 
@@ -2094,7 +2143,8 @@ function renderAttendeesPreview(attendees) {
         memberBalances[m] = {
             adelantado: 0,
             reintegrado: 0,
-            cuotas: 0
+            cuotas: 0,
+            aportes: 0
         };
     });
 
@@ -2109,7 +2159,8 @@ function renderAttendeesPreview(attendees) {
             memberBalances[d.persona] = {
                 adelantado: 0,
                 reintegrado: 0,
-                cuotas: 0
+                cuotas: 0,
+                aportes: 0
             };
         }
 
@@ -2124,6 +2175,10 @@ function renderAttendeesPreview(attendees) {
         } else if (tipo === 'cuota_jueves') {
             memberBalances[d.persona].cuotas +=
                 montoVal;
+
+        } else if (tipo === 'aporte') {
+            memberBalances[d.persona].aportes +=
+                montoVal;
         }
     });
 
@@ -2132,11 +2187,13 @@ function renderAttendeesPreview(attendees) {
             memberBalances[member] || {
                 adelantado: 0,
                 reintegrado: 0,
-                cuotas: 0
+                cuotas: 0,
+                aportes: 0
             };
 
         const saldoPrevioFavor =
-            info.adelantado -
+            info.adelantado +
+            info.aportes -
             info.reintegrado -
             info.cuotas;
 
