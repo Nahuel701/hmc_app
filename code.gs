@@ -61,8 +61,8 @@ function doPost(e) {
         ]);
       }
 
-      // Si es un Gasto o un Reintegro, se registra en la hoja Deudas
-      if (tipo === 'gasto' || tipo === 'reintegro') {
+      // Si es un Gasto, Reintegro o Aporte, se registra en la hoja Deudas
+      if (tipo === 'gasto' || tipo === 'reintegro' || tipo === 'aporte') {
         let sheetDeudas = ss.getSheetByName('Deudas');
         if (!sheetDeudas) {
           sheetDeudas = ss.insertSheet('Deudas');
