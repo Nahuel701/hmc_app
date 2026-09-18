@@ -2136,6 +2136,12 @@ function renderAttendeesPreview(attendees) {
                 : 0
         ) || 0;
 
+    const fechaSeleccionada =
+        document.getElementById('jsFechaSelect')?.value || '';
+
+    const fechaSeleccionadaKey =
+        normalizeDateKey(fechaSeleccionada);
+
     // Calcular saldos de cada miembro
     const memberBalances = {};
 
@@ -2176,6 +2182,20 @@ function renderAttendeesPreview(attendees) {
             memberBalances[d.persona].cuotas +=
                 montoVal;
 
+            /*
+             * La cuota de la fecha seleccionada ya forma parte del
+             * saldo actual luego de emitirla. La guardamos aparte para
+             * no volver a aplicarla en la previsualización.
+             */
+            if (
+                normalizeDateKey(d.fecha) ===
+                fechaSeleccionadaKey
+            ) {
+                memberBalances[d.persona].cuotasFechaSeleccionada =
+                    (memberBalances[d.persona]
+                        .cuotasFechaSeleccionada || 0) + montoVal;
+            }
+
         } else if (tipo === 'aporte') {
             memberBalances[d.persona].aportes +=
                 montoVal;
@@ -2198,12 +2218,24 @@ function renderAttendeesPreview(attendees) {
             info.cuotas;
 
         /*
+         * Antes de emitir no hay cuota para esta fecha y se descuenta la
+         * cuota indicada. Después de emitir, esa cuota ya está incluida
+         * en saldoPrevioFavor; por eso sólo se aplica la diferencia.
+         */
+        const cuotaPendienteDeAplicar =
+            Math.max(
+                0,
+                cuotaVal -
+                (info.cuotasFechaSeleccionada || 0)
+            );
+
+        /*
          * Al asignar la nueva cuota:
          * se descuenta del saldo a favor del miembro.
          */
         const saldoPosterior =
             saldoPrevioFavor -
-            cuotaVal;
+            cuotaPendienteDeAplicar;
 
         let badge = '';
 
