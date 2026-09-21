@@ -112,14 +112,12 @@ function logout() {
 function switchTab(tab) {
     const tabCargar = document.getElementById('tabCargar');
     const tabHistorial = document.getElementById('tabHistorial');
-    const tabResumen = document.getElementById('tabResumen');
     const tabDeudas = document.getElementById('tabDeudas');
     const tabAsistencia = document.getElementById('tabAsistencia');
     const tabJuevesSanto = document.getElementById('tabJuevesSanto');
 
     const btnCargar = document.getElementById('tabBtnCargar');
     const btnHistorial = document.getElementById('tabBtnHistorial');
-    const btnResumen = document.getElementById('tabBtnResumen');
     const btnDeudas = document.getElementById('tabBtnDeudas');
     const btnAsistencia = document.getElementById('tabBtnAsistencia');
     const btnJuevesSanto = document.getElementById('tabBtnJuevesSanto');
@@ -127,7 +125,6 @@ function switchTab(tab) {
     // Ocultar todas las pestañas
     tabCargar.classList.add('hidden');
     tabHistorial.classList.add('hidden');
-    tabResumen.classList.add('hidden');
 
     if (tabDeudas) tabDeudas.classList.add('hidden');
     if (tabAsistencia) tabAsistencia.classList.add('hidden');
@@ -142,7 +139,6 @@ function switchTab(tab) {
 
     btnCargar.className = inactiveClass;
     btnHistorial.className = inactiveClass;
-    btnResumen.className = inactiveClass;
 
     if (btnDeudas) btnDeudas.className = inactiveClass;
     if (btnAsistencia) btnAsistencia.className = inactiveClass;
@@ -155,10 +151,6 @@ function switchTab(tab) {
     } else if (tab === 'historial') {
         tabHistorial.classList.remove('hidden');
         btnHistorial.className = activeClass;
-
-    } else if (tab === 'resumen') {
-        tabResumen.classList.remove('hidden');
-        btnResumen.className = activeClass;
 
     } else if (tab === 'deudas' && tabDeudas) {
         tabDeudas.classList.remove('hidden');

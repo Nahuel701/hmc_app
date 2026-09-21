@@ -45,23 +45,8 @@ function doPost(e) {
       const ss = SpreadsheetApp.getActiveSpreadsheet();
       const tipo = (payload.tipo || '').toString().toLowerCase();
 
-      // Si es un Aporte o un Gasto, va a la hoja Movimientos (estado general del club)
-      if (tipo === 'aporte' || tipo === 'gasto') {
-        let sheetMov = ss.getSheetByName('Movimientos');
-        if (!sheetMov) {
-          sheetMov = ss.insertSheet('Movimientos');
-          sheetMov.appendRow(['Fecha', 'Persona', 'Tipo', 'Monto', 'Concepto']);
-        }
-        sheetMov.appendRow([
-          payload.fecha || '',
-          payload.persona || '',
-          payload.tipo || '',
-          payload.monto || 0,
-          payload.concepto || ''
-        ]);
-      }
-
-      // Si es un Gasto, Reintegro o Aporte, se registra en la hoja Deudas
+      // Deudas es la única fuente de verdad para todos los movimientos
+      // financieros. Esto evita duplicar aportes y gastos en otra hoja.
       if (tipo === 'gasto' || tipo === 'reintegro' || tipo === 'aporte') {
         let sheetDeudas = ss.getSheetByName('Deudas');
         if (!sheetDeudas) {
@@ -183,39 +168,11 @@ function getMembersData() {
 }
 
 function getTransactionsData() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  let sheet = ss.getSheetByName('Movimientos');
-  
-  if (!sheet) {
-    sheet = ss.getSheets()[0];
-  }
-
-  const data = sheet.getDataRange().getValues();
-  if (data.length <= 1) return [];
-
-  const transactions = [];
-
-  for (let i = 1; i < data.length; i++) {
-    const row = data[i];
-    if (!row[0] && !row[1] && !row[3]) continue;
-
-    let rawDate = row[0];
-    let formattedDate = rawDate;
-
-    if (rawDate instanceof Date) {
-      formattedDate = Utilities.formatDate(rawDate, Session.getScriptTimeZone(), "dd/MM/yyyy");
-    }
-
-    transactions.push({
-      fecha: formattedDate,
-      persona: row[1] || '',
-      tipo: (row[2] || '').toString().toLowerCase(),
-      monto: parseFloat(row[3]) || 0,
-      concepto: row[4] || ''
-    });
-  }
-
-  return transactions;
+  // Los gastos y aportes generales viven en Deudas junto con
+  // reintegros y cuotas. Se filtran para alimentar el resumen.
+  return getDebtsData().filter(d =>
+    d.tipo === 'gasto' || d.tipo === 'aporte'
+  );
 }
 
 function getDebtsData() {
