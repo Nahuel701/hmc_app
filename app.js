@@ -1,6 +1,5 @@
-let currentType = 'aporte';
-let transactions = [];
-let debts = [];
+let currentType = 'gasto';
+let movements = [];
 let attendance = [];
 let members = [];
 let isDemoMode = false;
@@ -8,7 +7,7 @@ let isDemoMode = false;
 // URL de tu Google Apps Script implementado como Web App
 const scriptUrl = 'https://script.google.com/macros/s/AKfycbwpNjT07qbcrfoendV7KxoSLpYgfXjce4cjYbgDmP_268jsVRVobCJTLgMDdqNp7_I/exec';
 const DATA_CACHE_TTL_MS = 30 * 1000;
-const DATA_CACHE_KEY = 'cc_sheet_data_cache';
+const DATA_CACHE_KEY = 'cc_unified_registry_cache_v1';
 let cachedSheetData = null;
 let cachedSheetDataAt = 0;
 let sheetDataRequest = null;
@@ -49,17 +48,15 @@ try {
 }
 
 const mockMembers = ['Juan Pérez', 'María Gómez', 'Carlos Rodríguez', 'Ana Martínez'];
-const mockTransactions = [
-    { fecha: '01/09/2026', persona: 'Juan Pérez', tipo: 'aporte', monto: 15000, concepto: 'Fondo inicial' },
-    { fecha: '02/09/2026', persona: 'María Gómez', tipo: 'aporte', monto: 12000, concepto: 'Aporte mensual' },
-    { fecha: '03/09/2026', persona: 'Carlos Rodríguez', tipo: 'gasto', monto: 4500, concepto: 'Supermercado' },
-    { fecha: '04/09/2026', persona: 'Ana Martínez', tipo: 'gasto', monto: 3200, concepto: 'Servicios e Internet' }
-];
 
-const mockDebts = [
+function createMovementId() {
+    return globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`;
+}
+const mockMovements = [
     { fecha: '03/09/2026', persona: 'Carlos Rodríguez', tipo: 'gasto', monto: 4500, concepto: 'Supermercado' },
     { fecha: '04/09/2026', persona: 'Ana Martínez', tipo: 'gasto', monto: 3200, concepto: 'Servicios e Internet' },
-    { fecha: '04/09/2026', persona: 'Carlos Rodríguez', tipo: 'reintegro', monto: 2000, concepto: 'Reintegro parcial supermercado' }
+    { fecha: '04/09/2026', persona: 'Carlos Rodríguez', tipo: 'reintegro', monto: 2000, concepto: 'Reintegro parcial supermercado' },
+    { fecha: '04/09/2026', persona: 'Juan Pérez', tipo: 'cuota_jueves', monto: 3000, concepto: 'Cuota Jueves Santo' }
 ];
 
 const mockAttendance = [
@@ -125,65 +122,28 @@ function logout() {
 }
 
 function switchTab(tab) {
-    const tabCargar = document.getElementById('tabCargar');
-    const tabHistorial = document.getElementById('tabHistorial');
-    const tabDeudas = document.getElementById('tabDeudas');
-    const tabAsistencia = document.getElementById('tabAsistencia');
-    const tabJuevesSanto = document.getElementById('tabJuevesSanto');
+    const tabs = {
+        cargar: ['tabCargar', 'tabBtnCargar'],
+        deudas: ['tabDeudas', 'tabBtnDeudas'],
+        asistencia: ['tabAsistencia', 'tabBtnAsistencia'],
+        'jueves-santo': ['tabJuevesSanto', 'tabBtnJuevesSanto']
+    };
+    const inactiveClass = 'px-4 py-1.5 text-xs font-semibold rounded-lg text-indigo-100 hover:text-white transition';
+    const activeClass = 'px-4 py-1.5 text-xs font-semibold rounded-lg bg-white text-indigo-700 shadow-sm transition';
 
-    const btnCargar = document.getElementById('tabBtnCargar');
-    const btnHistorial = document.getElementById('tabBtnHistorial');
-    const btnDeudas = document.getElementById('tabBtnDeudas');
-    const btnAsistencia = document.getElementById('tabBtnAsistencia');
-    const btnJuevesSanto = document.getElementById('tabBtnJuevesSanto');
+    Object.values(tabs).forEach(([panelId, buttonId]) => {
+        document.getElementById(panelId)?.classList.add('hidden');
+        const button = document.getElementById(buttonId);
+        if (button) button.className = inactiveClass;
+    });
 
-    // Ocultar todas las pestañas
-    tabCargar.classList.add('hidden');
-    tabHistorial.classList.add('hidden');
+    const selected = tabs[tab] ? tab : 'cargar';
+    const [panelId, buttonId] = tabs[selected];
+    document.getElementById(panelId)?.classList.remove('hidden');
+    const button = document.getElementById(buttonId);
+    if (button) button.className = activeClass;
 
-    if (tabDeudas) tabDeudas.classList.add('hidden');
-    if (tabAsistencia) tabAsistencia.classList.add('hidden');
-    if (tabJuevesSanto) tabJuevesSanto.classList.add('hidden');
-
-    // Resetear estilos de botones
-    const inactiveClass =
-        "px-4 py-1.5 text-xs font-semibold rounded-lg text-indigo-100 hover:text-white transition";
-
-    const activeClass =
-        "px-4 py-1.5 text-xs font-semibold rounded-lg bg-white text-indigo-700 shadow-sm transition";
-
-    btnCargar.className = inactiveClass;
-    btnHistorial.className = inactiveClass;
-
-    if (btnDeudas) btnDeudas.className = inactiveClass;
-    if (btnAsistencia) btnAsistencia.className = inactiveClass;
-    if (btnJuevesSanto) btnJuevesSanto.className = inactiveClass;
-
-    if (tab === 'cargar') {
-        tabCargar.classList.remove('hidden');
-        btnCargar.className = activeClass;
-
-    } else if (tab === 'historial') {
-        tabHistorial.classList.remove('hidden');
-        btnHistorial.className = activeClass;
-
-    } else if (tab === 'deudas' && tabDeudas) {
-        tabDeudas.classList.remove('hidden');
-        btnDeudas.className = activeClass;
-
-    } else if (tab === 'asistencia' && tabAsistencia) {
-        tabAsistencia.classList.remove('hidden');
-        btnAsistencia.className = activeClass;
-
-    } else if (tab === 'jueves-santo' && tabJuevesSanto) {
-        tabJuevesSanto.classList.remove('hidden');
-
-        if (btnJuevesSanto) {
-            btnJuevesSanto.className = activeClass;
-        }
-
-        renderJuevesSanto();
-    }
+    if (selected === 'jueves-santo') renderJuevesSanto();
 }
 
 /*
@@ -315,34 +275,20 @@ function setDefaultDate() {
 
 function setType(type) {
     currentType = type;
-
-    const btnAporte = document.getElementById('btnAporte');
-    const btnGasto = document.getElementById('btnGasto');
-    const btnReintegro = document.getElementById('btnReintegro');
-
-    // Estilos base inactivos
-    const baseInactive =
-        "py-2.5 px-3 text-xs sm:text-sm font-semibold rounded-xl border border-slate-200 bg-slate-50 text-slate-600 transition text-center";
-
-    btnAporte.className = baseInactive;
-    btnGasto.className = baseInactive;
-
-    if (btnReintegro) {
-        btnReintegro.className = baseInactive;
-    }
-
-    if (type === 'aporte') {
-        btnAporte.className =
-            "py-2.5 px-3 text-xs sm:text-sm font-semibold rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 transition text-center shadow-sm";
-
-    } else if (type === 'gasto') {
-        btnGasto.className =
-            "py-2.5 px-3 text-xs sm:text-sm font-semibold rounded-xl border border-rose-200 bg-rose-50 text-rose-700 transition text-center shadow-sm";
-
-    } else if (type === 'reintegro' && btnReintegro) {
-        btnReintegro.className =
-            "py-2.5 px-3 text-xs sm:text-sm font-semibold rounded-xl border border-indigo-200 bg-indigo-50 text-indigo-700 transition text-center shadow-sm";
-    }
+    const buttons = {
+        gasto: document.getElementById('btnGasto'),
+        reintegro: document.getElementById('btnReintegro'),
+        pago_cuota: document.getElementById('btnPagoCuota')
+    };
+    const baseInactive = 'py-2.5 px-3 text-xs sm:text-sm font-semibold rounded-xl border border-slate-200 bg-slate-50 text-slate-600 transition text-center';
+    const activeClasses = {
+        gasto: 'py-2.5 px-3 text-xs sm:text-sm font-semibold rounded-xl border border-amber-200 bg-amber-50 text-amber-700 transition text-center shadow-sm',
+        reintegro: 'py-2.5 px-3 text-xs sm:text-sm font-semibold rounded-xl border border-indigo-200 bg-indigo-50 text-indigo-700 transition text-center shadow-sm',
+        pago_cuota: 'py-2.5 px-3 text-xs sm:text-sm font-semibold rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 transition text-center shadow-sm'
+    };
+    Object.entries(buttons).forEach(([key, button]) => {
+        if (button) button.className = key === type ? activeClasses[key] : baseInactive;
+    });
 }
 
 function handleMemberChange() {
@@ -364,131 +310,55 @@ function handleMemberChange() {
 
 async function addTransaction(e) {
     e.preventDefault();
-
     const fechaInput = document.getElementById('fecha').value;
     const personaSelect = document.getElementById('persona').value;
-    const customMemberName =
-        document.getElementById('customMemberName').value.trim();
+    const customMemberName = document.getElementById('customMemberName').value.trim();
+    const monto = parseFloat(document.getElementById('monto').value);
+    const concepto = document.getElementById('concepto').value.trim();
+    const persona = personaSelect === '__NO_MIEMBRO__' ? customMemberName : personaSelect;
 
-    const monto =
-        parseFloat(document.getElementById('monto').value);
-
-    const concepto =
-        document.getElementById('concepto').value.trim();
-
-    let persona = personaSelect;
-
-    if (personaSelect === '__NO_MIEMBRO__') {
-        if (!customMemberName) {
-            return;
-        }
-
-        persona = customMemberName;
-    }
-
-    if (!fechaInput || !persona || isNaN(monto) || !concepto) {
-        return;
-    }
-
-    let formattedDate = fechaInput;
-
-    if (fechaInput.includes('-')) {
-        const parts = fechaInput.split('-');
-
-        if (parts.length === 3) {
-            formattedDate =
-                `${parts[2]}/${parts[1]}/${parts[0]}`;
-        }
-    }
-
-    const newTx = {
+    if (!fechaInput || !persona || !Number.isFinite(monto) || monto <= 0 || !concepto) return;
+    const [year, month, day] = fechaInput.split('-');
+    const movement = {
         action: 'add',
-        fecha: formattedDate,
+        id: createMovementId(),
+        fecha: `${day}/${month}/${year}`,
         persona,
         tipo: currentType,
         monto,
         concepto
     };
-
-    const submitBtn =
-        document.getElementById('submitBtn');
-
+    const submitBtn = document.getElementById('submitBtn');
     submitBtn.disabled = true;
-    submitBtn.textContent = "Guardando...";
+    submitBtn.textContent = 'Guardando...';
 
     if (isDemoMode) {
-        if (
-            currentType === 'aporte' ||
-            currentType === 'gasto'
-        ) {
-            transactions.unshift(newTx);
-        }
-
-        if (
-            currentType === 'gasto' ||
-            currentType === 'reintegro' ||
-            currentType === 'aporte'
-        ) {
-            debts.unshift(newTx);
-        }
-
+        movements.unshift(movement);
         renderApp();
-
-        submitBtn.disabled = false;
-        submitBtn.textContent = "Registrar Movimiento";
-
-        document.getElementById('transactionForm').reset();
-
-        handleMemberChange();
-        setDefaultDate();
-        setType('aporte');
-
-        return;
-    }
-
-    try {
-        await fetch(scriptUrl, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: {
-                'Content-Type': 'text/plain;charset=utf-8'
-            },
-            body: JSON.stringify(newTx)
-        });
-
-        setTimeout(() => {
-            fetchSheetData({ force: true });
-        }, 1200);
-
-    } catch (err) {
-        console.error(err);
-
-        if (
-            currentType === 'aporte' ||
-            currentType === 'gasto'
-        ) {
-            transactions.unshift(newTx);
+    } else {
+        try {
+            await fetch(scriptUrl, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify(movement)
+            });
+            movements.unshift(movement);
+            renderApp();
+            setTimeout(() => fetchSheetData({ force: true }), 1200);
+        } catch (err) {
+            console.error(err);
+            movements.unshift(movement);
+            renderApp();
         }
-
-        if (
-            currentType === 'gasto' ||
-            currentType === 'reintegro' ||
-            currentType === 'aporte'
-        ) {
-            debts.unshift(newTx);
-        }
-
-        renderApp();
     }
 
     submitBtn.disabled = false;
-    submitBtn.textContent = "Registrar Movimiento";
-
+    submitBtn.textContent = 'Registrar movimiento';
     document.getElementById('transactionForm').reset();
-
     handleMemberChange();
     setDefaultDate();
-    setType('aporte');
+    setType('gasto');
 }
 
 async function fetchSheetData(options = {}) {
@@ -541,109 +411,39 @@ async function fetchSheetData(options = {}) {
 }
 
 function applySheetData(data) {
-        const warningBanner = document.getElementById('versionWarningBanner');
-        const syncStatusText = document.getElementById('syncStatusText');
-        if (Array.isArray(data)) {
+    const warningBanner = document.getElementById('versionWarningBanner');
+    const syncStatusText = document.getElementById('syncStatusText');
+    if (!data || data.schemaVersion !== 2 || !Array.isArray(data.movements)) {
+        movements = [];
+        if (Array.isArray(data?.members)) members = [...data.members];
+        if (Array.isArray(data?.attendance)) attendance = [...data.attendance].reverse();
+        warningBanner?.classList.remove('hidden');
+        if (syncStatusText) syncStatusText.textContent = '⚠️ Apps Script todavía no entrega el Registro unificado';
+        return;
+    }
 
-            transactions = [...data].reverse();
-
-            members = [];
-            debts = [];
-
-            warningBanner.classList.remove('hidden');
-
-            syncStatusText.textContent =
-                "⚠️ Sincronizado (versión anterior de Apps Script)";
-
-        } else if (data && typeof data === 'object') {
-
-            warningBanner.classList.add('hidden');
-
-            syncStatusText.textContent =
-                "🟢 Sincronizado correctamente con Google Sheets";
-
-            if (Array.isArray(data.transactions)) {
-                transactions =
-                    [...data.transactions].reverse();
-            }
-
-            if (Array.isArray(data.members)) {
-                members = [...data.members];
-            }
-
-            if (Array.isArray(data.debts)) {
-                debts =
-                    [...data.debts].reverse();
-            }
-
-            if (Array.isArray(data.attendance)) {
-                attendance =
-                    [...data.attendance].reverse();
-            }
-
-            // Complementar debts con aportes registrados en Movimientos (transactions)
-            // para conciliar automáticamente registros previos de la planilla
-            if (Array.isArray(transactions)) {
-                transactions.forEach(tx => {
-                    if ((tx.tipo || '').toLowerCase() === 'aporte') {
-                        const existsInDebts = debts.some(d =>
-                            (d.tipo || '').toLowerCase() === 'aporte' &&
-                            d.persona === tx.persona &&
-                            parseFloat(d.monto) === parseFloat(tx.monto) &&
-                            normalizeDateKey(d.fecha) === normalizeDateKey(tx.fecha) &&
-                            (d.concepto || '').trim() === (tx.concepto || '').trim()
-                        );
-
-                        if (!existsInDebts) {
-                            debts.push(tx);
-                        }
-                    }
-                });
-            }
-        }
-
+    warningBanner?.classList.add('hidden');
+    if (syncStatusText) syncStatusText.textContent = '🟢 Sincronizado con Registro';
+    movements = [...data.movements].reverse();
+    if (Array.isArray(data.members)) members = [...data.members];
+    if (Array.isArray(data.attendance)) attendance = [...data.attendance].reverse();
 }
 
 function enableDemoMode(statusMsg) {
     isDemoMode = true;
-
     safeStorage.setItem('cc_logged', 'true');
-
     document.getElementById('loginScreen').classList.add('hidden');
-
     members = [...mockMembers];
+    if (movements.length === 0) movements = [...mockMovements];
+    if (attendance.length === 0) attendance = [...mockAttendance];
 
-    if (transactions.length === 0) {
-        transactions = [...mockTransactions];
-    }
-
-    if (debts.length === 0) {
-        debts = [...mockDebts];
-    }
-
-    if (attendance.length === 0) {
-        attendance = [...mockAttendance];
-    }
-
-    const syncStatusText =
-        document.getElementById('syncStatusText');
-
-    if (syncStatusText) {
-        syncStatusText.textContent =
-            statusMsg ||
-            "💡 Modo Demo Activo (Datos simulados)";
-    }
-
-    const demoBtn =
-        document.getElementById('demoToggleBtn');
-
+    const syncStatusText = document.getElementById('syncStatusText');
+    if (syncStatusText) syncStatusText.textContent = statusMsg || '💡 Modo Demo Activo (Datos simulados)';
+    const demoBtn = document.getElementById('demoToggleBtn');
     if (demoBtn) {
-        demoBtn.textContent = "Modo Real (Sheets)";
-
-        demoBtn.className =
-            "bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-lg hover:bg-emerald-200 transition font-medium";
+        demoBtn.textContent = 'Modo Real (Sheets)';
+        demoBtn.className = 'bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-lg hover:bg-emerald-200 transition font-medium';
     }
-
     renderApp();
 }
 
@@ -668,494 +468,124 @@ function toggleDemoMode() {
     }
 }
 
+function buildMemberBalances(source = movements) {
+    const balances = {};
+    const ensure = person => {
+        if (!balances[person]) balances[person] = { debtToMember: 0, debtToClub: 0 };
+        return balances[person];
+    };
+    members.forEach(ensure);
+
+    source.forEach(movement => {
+        const person = (movement.persona || '').toString().trim();
+        if (!person) return;
+        const balance = ensure(person);
+        const amount = parseFloat(movement.monto) || 0;
+        const type = (movement.tipo || '').toString().trim().toLowerCase();
+        if (type === 'gasto') balance.debtToMember += amount;
+        else if (type === 'reintegro') balance.debtToMember -= amount;
+        else if (type === 'cuota_jueves') balance.debtToClub += amount;
+        else if (type === 'pago_cuota') balance.debtToClub -= amount;
+    });
+
+    Object.values(balances).forEach(balance => {
+        balance.debtToMember = Math.max(0, balance.debtToMember);
+        balance.debtToClub = Math.max(0, balance.debtToClub);
+        balance.net = balance.debtToMember - balance.debtToClub;
+    });
+    return balances;
+}
+
 function renderApp() {
-    const txTableBody =
-        document.getElementById('transactionTableBody');
-
-    const summaryTableBody =
-        document.getElementById('summaryTableBody');
-
-    const totalAportesEl =
-        document.getElementById('totalAportes');
-
-    const totalGastosEl =
-        document.getElementById('totalGastos');
-
-    const personaSelect =
-        document.getElementById('persona');
-
-    const memberBadge =
-        document.getElementById('memberCountBadge');
-
-    // Elementos de la pestaña Deudas
-    const totalDeudaPendienteEl =
-        document.getElementById('totalDeudaPendiente');
-
-    const totalReintegradoEl =
-        document.getElementById('totalReintegrado');
-
-    const debtsSummaryTableBody =
-        document.getElementById('debtsSummaryTableBody');
-
-    const debtsTableBody =
-        document.getElementById('debtsTableBody');
+    const personaSelect = document.getElementById('persona');
+    const memberBadge = document.getElementById('memberCountBadge');
+    const summaryBody = document.getElementById('debtsSummaryTableBody');
+    const historyBody = document.getElementById('debtsTableBody');
+    if (!personaSelect) return;
 
     personaSelect.innerHTML = '';
-
     if (members.length === 0) {
-        memberBadge.textContent = "0 encontrados";
-
-        memberBadge.className =
-            "text-[10px] bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full font-medium";
-
-        const defaultOpt =
-            document.createElement('option');
-
-        defaultOpt.value = "";
-        defaultOpt.disabled = true;
-        defaultOpt.selected = true;
-
-        defaultOpt.textContent =
-            "No hay miembros en pestaña 'Miembros' o falta actualizar Apps Script";
-
-        personaSelect.appendChild(defaultOpt);
-
+        memberBadge.textContent = '0 encontrados';
+        memberBadge.className = 'text-[10px] bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full font-medium';
+        const option = document.createElement('option');
+        option.value = '';
+        option.disabled = true;
+        option.selected = true;
+        option.textContent = "No hay miembros en pestaña 'Miembros' o falta actualizar Apps Script";
+        personaSelect.appendChild(option);
     } else {
-        memberBadge.textContent =
-            `${members.length} miembros`;
-
-        memberBadge.className =
-            "text-[10px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full font-medium";
-
-        const defaultOpt =
-            document.createElement('option');
-
-        defaultOpt.value = "";
-        defaultOpt.disabled = true;
-        defaultOpt.selected = true;
-        defaultOpt.textContent =
-            "Selecciona una persona...";
-
-        personaSelect.appendChild(defaultOpt);
-
+        memberBadge.textContent = `${members.length} miembros`;
+        memberBadge.className = 'text-[10px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full font-medium';
+        const option = document.createElement('option');
+        option.value = '';
+        option.disabled = true;
+        option.selected = true;
+        option.textContent = 'Selecciona una persona...';
+        personaSelect.appendChild(option);
         members.forEach(member => {
-            const opt =
-                document.createElement('option');
-
-            opt.value = member;
-            opt.textContent = member;
-
-            personaSelect.appendChild(opt);
+            const item = document.createElement('option');
+            item.value = member;
+            item.textContent = member;
+            personaSelect.appendChild(item);
         });
-
-        // Opción para No miembro
-        const noMiembroOpt =
-            document.createElement('option');
-
-        noMiembroOpt.value = "__NO_MIEMBRO__";
-        noMiembroOpt.textContent =
-            "➕ No miembro (Ingresar nombre)";
-
-        personaSelect.appendChild(noMiembroOpt);
+        const nonMember = document.createElement('option');
+        nonMember.value = '__NO_MIEMBRO__';
+        nonMember.textContent = '➕ No miembro (Ingresar nombre)';
+        personaSelect.appendChild(nonMember);
     }
 
-    // 1. Renderizar Historial de Movimientos Generales
-    txTableBody.innerHTML = '';
-    summaryTableBody.innerHTML = '';
-
-    let totalAportes = 0;
-    let totalGastos = 0;
-
-    const personMap = {};
-
-    members.forEach(m => {
-        personMap[m] = {
-            aportes: 0,
-            gastos: 0
-        };
-    });
-
-    transactions.forEach(tx => {
-        const montoVal =
-            parseFloat(tx.monto) || 0;
-
-        if (tx.tipo === 'aporte') {
-            totalAportes += montoVal;
-
-        } else if (tx.tipo === 'gasto') {
-            totalGastos += montoVal;
-        }
-
-        if (!personMap[tx.persona]) {
-            personMap[tx.persona] = {
-                aportes: 0,
-                gastos: 0
-            };
-        }
-
-        if (tx.tipo === 'aporte') {
-            personMap[tx.persona].aportes += montoVal;
-
-        } else if (tx.tipo === 'gasto') {
-            personMap[tx.persona].gastos += montoVal;
-        }
-
-        const tr =
-            document.createElement('tr');
-
-        tr.innerHTML = `
-            <td class="py-3 px-2 text-slate-500 text-xs">${tx.fecha || '-'}</td>
-
-            <td class="py-3 px-2 font-medium text-slate-800">
-                ${escapeHtml(tx.persona)}
-            </td>
-
-            <td class="py-3 px-2">
-                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${tx.tipo === 'aporte'
-                    ? 'bg-emerald-100 text-emerald-800'
-                    : 'bg-rose-100 text-rose-800'}">
-                    ${(tx.tipo || '').toUpperCase()}
-                </span>
-            </td>
-
-            <td class="py-3 px-2 text-slate-600">
-                ${escapeHtml(tx.concepto || '')}
-            </td>
-
-            <td class="py-3 px-2 text-right font-semibold ${tx.tipo === 'aporte'
-                ? 'text-emerald-600'
-                : 'text-rose-600'}">
-                $${montoVal.toFixed(2)}
-            </td>
-        `;
-
-        txTableBody.appendChild(tr);
-    });
-
-    // 2. Renderizar Resumen General por Persona
-    const persons = Object.keys(personMap);
-
-    if (persons.length === 0) {
-        summaryTableBody.innerHTML = `
-            <tr>
-                <td colspan="4"
-                    class="py-6 text-center text-slate-400 text-sm">
-                    No hay miembros ni registros cargados aún.
-                </td>
-            </tr>
-        `;
-
-    } else {
-        persons.forEach(person => {
-            const data = personMap[person];
-
-            const balance =
-                data.aportes - data.gastos;
-
-            const tr =
-                document.createElement('tr');
-
-            tr.innerHTML = `
-                <td class="py-3 px-3 font-medium text-slate-800">
-                    ${escapeHtml(person)}
-                </td>
-
-                <td class="py-3 px-3 text-right text-emerald-600">
-                    $${data.aportes.toFixed(2)}
-                </td>
-
-                <td class="py-3 px-3 text-right text-rose-600">
-                    $${data.gastos.toFixed(2)}
-                </td>
-
-                <td class="py-3 px-3 text-right font-bold ${balance >= 0
-                    ? 'text-emerald-700'
-                    : 'text-rose-700'}">
-                    $${balance.toFixed(2)}
-                </td>
-            `;
-
-            summaryTableBody.appendChild(tr);
-        });
-    }
-
-    if (totalAportesEl) {
-        totalAportesEl.textContent =
-            `$${totalAportes.toFixed(2)}`;
-    }
-
-    if (totalGastosEl) {
-        totalGastosEl.textContent =
-            `$${totalGastos.toFixed(2)}`;
-    }
-
-    // 3. Renderizar Pestaña Deudas y Reintegros
-    if (debtsSummaryTableBody && debtsTableBody) {
-        debtsSummaryTableBody.innerHTML = '';
-        debtsTableBody.innerHTML = '';
-
-        const debtMap = {};
-
-        members.forEach(m => {
-            debtMap[m] = {
-                adelantado: 0,
-                reintegrado: 0,
-                cuotas: 0,
-                aportes: 0
-            };
-        });
-
-        let totalReintegradoGen = 0;
-
-        debts.forEach(d => {
-            const montoVal =
-                parseFloat(d.monto) || 0;
-
-            const tipo =
-                (d.tipo || '').toString().trim().toLowerCase();
-
-            if (!debtMap[d.persona]) {
-                debtMap[d.persona] = {
-                    adelantado: 0,
-                    reintegrado: 0,
-                    cuotas: 0,
-                    aportes: 0
-                };
-            }
-
-            if (tipo === 'gasto') {
-                debtMap[d.persona].adelantado += montoVal;
-
-            } else if (tipo === 'reintegro') {
-                debtMap[d.persona].reintegrado += montoVal;
-                totalReintegradoGen += montoVal;
-
-            } else if (tipo === 'cuota_jueves') {
-                debtMap[d.persona].cuotas += montoVal;
-
-            } else if (tipo === 'aporte') {
-                debtMap[d.persona].aportes += montoVal;
-            }
-
-            // Fila en Historial de Deudas
-            const tr =
-                document.createElement('tr');
-
-            const isReintegro =
-                tipo === 'reintegro';
-
-            const isCuota =
-                tipo === 'cuota_jueves';
-
-            const isAporte =
-                tipo === 'aporte';
-
-            let tagLabel =
-                'GASTO ADELANTADO';
-
-            let tagStyle =
-                'bg-amber-100 text-amber-800';
-
-            let amountStyle =
-                'text-amber-600';
-
-            if (isReintegro) {
-                tagLabel =
-                    'REINTEGRO (PAGO)';
-
-                tagStyle =
-                    'bg-indigo-100 text-indigo-800';
-
-                amountStyle =
-                    'text-indigo-600';
-
-            } else if (isCuota) {
-                tagLabel =
-                    'CUOTA JUEVES SANTO';
-
-                tagStyle =
-                    'bg-rose-100 text-rose-800';
-
-                amountStyle =
-                    'text-rose-600';
-
-            } else if (isAporte) {
-                tagLabel =
-                    'APORTE (PAGO CUOTA)';
-
-                tagStyle =
-                    'bg-emerald-100 text-emerald-800';
-
-                amountStyle =
-                    'text-emerald-600';
-            }
-
-            tr.innerHTML = `
-                <td class="py-3 px-2 text-slate-500 text-xs">
-                    ${d.fecha || '-'}
-                </td>
-
-                <td class="py-3 px-2 font-medium text-slate-800">
-                    ${escapeHtml(d.persona)}
-                </td>
-
-                <td class="py-3 px-2">
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${tagStyle}">
-                        ${tagLabel}
-                    </span>
-                </td>
-
-                <td class="py-3 px-2 text-slate-600">
-                    ${escapeHtml(d.concepto || '')}
-                </td>
-
-                <td class="py-3 px-2 text-right font-semibold ${amountStyle}">
-                    $${montoVal.toFixed(2)}
-                </td>
-            `;
-
-            debtsTableBody.appendChild(tr);
-        });
-
-        let totalDeudaClubPendiente = 0;
-
-        const debtPersons =
-            Object.keys(debtMap);
-
-        if (debtPersons.length === 0) {
-            debtsSummaryTableBody.innerHTML = `
-                <tr>
-                    <td colspan="6"
-                        class="py-6 text-center text-slate-400 text-sm">
-                        No hay miembros ni deudas registradas aún.
-                    </td>
-                </tr>
-            `;
-
+    if (summaryBody) {
+        summaryBody.innerHTML = '';
+        const balances = buildMemberBalances();
+        const pending = Object.entries(balances)
+            .filter(([, balance]) => Math.abs(balance.net) > 0.001)
+            .sort(([a], [b]) => a.localeCompare(b, 'es'));
+        if (pending.length === 0) {
+            summaryBody.innerHTML = '<tr><td colspan="4" class="py-6 text-center text-slate-400 text-sm">No hay saldos pendientes.</td></tr>';
         } else {
-            debtPersons.forEach(person => {
-                const info =
-                    debtMap[person];
-
-                /*
-                 * Balance Neto =
-                 * (Gastos asumidos + Aportes realizados)
-                 * - Reintegros recibidos
-                 * - Cuotas adeudadas
-                 *
-                 * Si balanceNeto > 0:
-                 * El club le debe al miembro (o miembro tiene saldo a favor).
-                 *
-                 * Si balanceNeto < 0:
-                 * El miembro le debe al club.
-                 *
-                 * Si balanceNeto == 0:
-                 * Saldado.
-                 */
-                const balanceNeto =
-                    info.adelantado +
-                    info.aportes -
-                    info.reintegrado -
-                    info.cuotas;
-
-                if (balanceNeto > 0) {
-                    totalDeudaClubPendiente +=
-                        balanceNeto;
-                }
-
-                let badge = '';
-
-                if (
-                    info.adelantado === 0 &&
-                    info.reintegrado === 0 &&
-                    info.cuotas === 0 &&
-                    info.aportes === 0
-                ) {
-                    badge = `
-                        <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600">
-                            Sin movimientos
-                        </span>
-                    `;
-
-                } else if (
-                    Math.abs(balanceNeto) <= 0.001
-                ) {
-                    badge = `
-                        <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
-                            Saldado
-                        </span>
-                    `;
-
-                } else if (balanceNeto > 0) {
-                    badge = `
-                        <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                            A favor (Club debe)
-                        </span>
-                    `;
-
-                } else {
-                    badge = `
-                        <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-rose-100 text-rose-800">
-                            Debe pagar cuota
-                        </span>
-                    `;
-                }
-
-                const tr =
-                    document.createElement('tr');
-
+            pending.forEach(([person, balance]) => {
+                const tr = document.createElement('tr');
+                const net = balance.net;
                 tr.innerHTML = `
-                    <td class="py-3 px-3 font-medium text-slate-800">
-                        ${escapeHtml(person)}
-                    </td>
-
-                    <td class="py-3 px-3 text-right text-slate-600">
-                        $${info.adelantado.toFixed(2)}
-                    </td>
-
-                    <td class="py-3 px-3 text-right text-indigo-600">
-                        $${info.reintegrado.toFixed(2)}
-                    </td>
-
-                    <td class="py-3 px-3 text-right text-rose-600">
-                        $${info.cuotas.toFixed(2)}
-                    </td>
-
-                    <td class="py-3 px-3 text-right font-bold ${balanceNeto > 0
-                        ? 'text-indigo-600'
-                        : (balanceNeto < -0.001
-                            ? 'text-rose-600'
-                            : 'text-emerald-600')}">
-
-                        ${balanceNeto >= 0
-                            ? '$' + balanceNeto.toFixed(2)
-                            : '-$' + Math.abs(balanceNeto).toFixed(2)}
-                    </td>
-
-                    <td class="py-3 px-3 text-center">
-                        ${badge}
-                    </td>
+                    <td class="py-3 px-3 font-medium text-slate-800">${escapeHtml(person)}</td>
+                    <td class="py-3 px-3 text-right text-rose-600">$${balance.debtToClub.toFixed(2)}</td>
+                    <td class="py-3 px-3 text-right text-indigo-600">$${balance.debtToMember.toFixed(2)}</td>
+                    <td class="py-3 px-3 text-right font-bold ${net > 0 ? 'text-indigo-700' : 'text-rose-700'}">${net > 0 ? 'Club debe ' : 'Miembro debe '}$${Math.abs(net).toFixed(2)}</td>
                 `;
-
-                debtsSummaryTableBody.appendChild(tr);
+                summaryBody.appendChild(tr);
             });
         }
+    }
 
-        if (totalDeudaPendienteEl) {
-            totalDeudaPendienteEl.textContent =
-                `$${totalDeudaClubPendiente.toFixed(2)}`;
-        }
-
-        if (totalReintegradoEl) {
-            totalReintegradoEl.textContent =
-                `$${totalReintegradoGen.toFixed(2)}`;
+    if (historyBody) {
+        historyBody.innerHTML = '';
+        if (movements.length === 0) {
+            historyBody.innerHTML = '<tr><td colspan="5" class="py-6 text-center text-slate-400 text-sm">Todavía no hay movimientos.</td></tr>';
+        } else {
+            movements.forEach(movement => {
+                const type = (movement.tipo || '').toString().trim().toLowerCase();
+                const styles = {
+                    gasto: ['GASTO ADELANTADO', 'bg-amber-100 text-amber-800', 'text-amber-600'],
+                    reintegro: ['REINTEGRO', 'bg-indigo-100 text-indigo-800', 'text-indigo-600'],
+                    cuota_jueves: ['CUOTA EMITIDA', 'bg-rose-100 text-rose-800', 'text-rose-600'],
+                    pago_cuota: ['PAGO DE CUOTA', 'bg-emerald-100 text-emerald-800', 'text-emerald-600'],
+                    aporte: ['APORTE ANTERIOR', 'bg-slate-100 text-slate-700', 'text-slate-600']
+                };
+                const [label, badgeClass, amountClass] = styles[type] || [type.toUpperCase(), 'bg-slate-100 text-slate-700', 'text-slate-600'];
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="py-3 px-2 text-slate-500 text-xs">${escapeHtml(movement.fecha || '-')}</td>
+                    <td class="py-3 px-2 font-medium text-slate-800">${escapeHtml(movement.persona || '')}</td>
+                    <td class="py-3 px-2"><span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${badgeClass}">${label}</span></td>
+                    <td class="py-3 px-2 text-slate-600">${escapeHtml(movement.concepto || '')}</td>
+                    <td class="py-3 px-2 text-right font-semibold ${amountClass}">$${(parseFloat(movement.monto) || 0).toFixed(2)}</td>
+                `;
+                historyBody.appendChild(tr);
+            });
         }
     }
 
-    // 4. Renderizar Sección de Asistencia
     renderAttendance();
-
-    // 5. Renderizar Sección Jueves Santo
     renderJuevesSanto();
 }
 
@@ -1650,7 +1080,7 @@ async function saveAttendance(e) {
             method: 'POST',
             mode: 'no-cors',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'text/plain;charset=utf-8'
             },
             body: JSON.stringify(payload)
         });
@@ -1817,104 +1247,15 @@ function getAttendeesForDate(targetDate) {
 }
 
 function calculateClubDebtToSettle() {
-    /*
-     * 1. Deuda de reintegros pendientes a miembros
-     *    por gastos adelantados.
-     */
+    const balances = Object.values(buildMemberBalances());
+    const clubOwesMembers = balances.reduce((sum, balance) => sum + balance.debtToMember, 0);
+    const membersOweClub = balances.reduce((sum, balance) => sum + balance.debtToClub, 0);
+    return Math.max(0, clubOwesMembers - membersOweClub);
+}
 
-    const debtMap = {};
-
-    members.forEach(m => {
-        debtMap[m] = {
-            adelantado: 0,
-            reintegrado: 0,
-            cuotas: 0,
-            aportes: 0
-        };
-    });
-
-    debts.forEach(d => {
-        const montoVal =
-            parseFloat(d.monto) || 0;
-
-        const tipo =
-            (d.tipo || '').toLowerCase();
-
-        if (!debtMap[d.persona]) {
-            debtMap[d.persona] = {
-                adelantado: 0,
-                reintegrado: 0,
-                cuotas: 0,
-                aportes: 0
-            };
-        }
-
-        if (tipo === 'gasto') {
-            debtMap[d.persona].adelantado +=
-                montoVal;
-
-        } else if (tipo === 'reintegro') {
-            debtMap[d.persona].reintegrado +=
-                montoVal;
-
-        } else if (tipo === 'cuota_jueves') {
-            debtMap[d.persona].cuotas +=
-                montoVal;
-
-        } else if (tipo === 'aporte') {
-            debtMap[d.persona].aportes +=
-                montoVal;
-        }
-    });
-
-    let deudaPendienteReintegros = 0;
-
-    Object.values(debtMap).forEach(info => {
-        const bal =
-            info.adelantado +
-            info.aportes -
-            info.reintegrado -
-            info.cuotas;
-
-        if (bal > 0) {
-            deudaPendienteReintegros += bal;
-        }
-    });
-
-    /*
-     * 2. Déficit de la cuenta general
-     *    si gastos > aportes.
-     */
-
-    let totalAportes = 0;
-    let totalGastos = 0;
-
-    transactions.forEach(t => {
-        const m =
-            parseFloat(t.monto) || 0;
-
-        if (t.tipo === 'aporte') {
-            totalAportes += m;
-
-        } else if (t.tipo === 'gasto') {
-            totalGastos += m;
-        }
-    });
-
-    const deficitGeneral =
-        Math.max(
-            0,
-            totalGastos - totalAportes
-        );
-
-    /*
-     * El monto a saldar considera la deuda pendiente
-     * a miembros o el déficit general.
-     */
-    return Math.max(
-        deudaPendienteReintegros,
-        deficitGeneral
-    );
+function calculateSuggestedQuota(totalDebt, attendeeCount) {
+    if (totalDebt <= 0 || attendeeCount <= 0) return 0;
+    return Math.ceil((totalDebt / attendeeCount) / 5) * 5;
 }
 
 function renderJuevesSanto() {
@@ -2019,34 +1360,10 @@ function renderJuevesSanto() {
      *
      * deuda / cantidad de asistentes
      *
-     * redondeada hacia arriba al múltiplo de $5
-     *
-     * con un mínimo de $30.000.
+     * redondeada hacia arriba al múltiplo de $5.
+     * Sin deuda pendiente, la cuota sugerida es cero.
      */
-
-    const CUOTA_MINIMA = 30000;
-
-    let cuotaSugerida = 0;
-
-    if (attendees.length > 0) {
-
-        if (totalDeuda > 0) {
-            const cuotaBase =
-                totalDeuda /
-                attendees.length;
-
-            cuotaSugerida =
-                Math.ceil(
-                    cuotaBase / 5
-                ) * 5;
-        }
-
-        cuotaSugerida =
-            Math.max(
-                CUOTA_MINIMA,
-                cuotaSugerida
-            );
-    }
+    const cuotaSugerida = calculateSuggestedQuota(totalDeuda, attendees.length);
 
     if (cuotaSugeridaEl) {
         cuotaSugeridaEl.textContent =
@@ -2105,7 +1422,6 @@ function renderJuevesSanto() {
         attendees
     );
 
-    renderJuevesSantoHistory();
 }
 
 function renderAttendeesPreview(attendees) {
@@ -2166,11 +1482,11 @@ function renderAttendeesPreview(attendees) {
             adelantado: 0,
             reintegrado: 0,
             cuotas: 0,
-            aportes: 0
+            pagosCuota: 0
         };
     });
 
-    debts.forEach(d => {
+    movements.forEach(d => {
         const montoVal =
             parseFloat(d.monto) || 0;
 
@@ -2182,7 +1498,7 @@ function renderAttendeesPreview(attendees) {
                 adelantado: 0,
                 reintegrado: 0,
                 cuotas: 0,
-                aportes: 0
+                pagosCuota: 0
             };
         }
 
@@ -2212,9 +1528,8 @@ function renderAttendeesPreview(attendees) {
                         .cuotasFechaSeleccionada || 0) + montoVal;
             }
 
-        } else if (tipo === 'aporte') {
-            memberBalances[d.persona].aportes +=
-                montoVal;
+        } else if (tipo === 'pago_cuota') {
+            memberBalances[d.persona].pagosCuota += montoVal;
         }
     });
 
@@ -2224,14 +1539,12 @@ function renderAttendeesPreview(attendees) {
                 adelantado: 0,
                 reintegrado: 0,
                 cuotas: 0,
-                aportes: 0
+                pagosCuota: 0
             };
 
         const saldoPrevioFavor =
-            info.adelantado +
-            info.aportes -
-            info.reintegrado -
-            info.cuotas;
+            Math.max(0, info.adelantado - info.reintegrado) -
+            Math.max(0, info.cuotas - info.pagosCuota);
 
         /*
          * Antes de emitir no hay cuota para esta fecha y se descuenta la
@@ -2320,72 +1633,6 @@ function renderAttendeesPreview(attendees) {
     });
 }
 
-function renderJuevesSantoHistory() {
-    const historyTableBody =
-        document.getElementById(
-            'jsHistoryTableBody'
-        );
-
-    if (!historyTableBody) {
-        return;
-    }
-
-    historyTableBody.innerHTML = '';
-
-    const cuotasHistory =
-        debts.filter(
-            d =>
-                (d.tipo || '').toLowerCase() ===
-                'cuota_jueves'
-        );
-
-    if (cuotasHistory.length === 0) {
-        historyTableBody.innerHTML = `
-            <tr>
-                <td colspan="4"
-                    class="py-6 text-center text-slate-400 text-xs">
-
-                    No se han emitido cuotas
-                    de Jueves Santo todavía.
-
-                </td>
-            </tr>
-        `;
-
-        return;
-    }
-
-    cuotasHistory.forEach(d => {
-        const montoVal =
-            parseFloat(d.monto) || 0;
-
-        const tr =
-            document.createElement('tr');
-
-        tr.innerHTML = `
-            <td class="py-3 px-3 text-slate-500 text-xs">
-                ${d.fecha || '-'}
-            </td>
-
-            <td class="py-3 px-3 font-semibold text-slate-800 text-xs sm:text-sm">
-                ${escapeHtml(d.persona)}
-            </td>
-
-            <td class="py-3 px-3 text-slate-600 text-xs">
-                ${escapeHtml(
-                    d.concepto ||
-                    'Cuota Jueves Santo'
-                )}
-            </td>
-
-            <td class="py-3 px-3 text-right font-bold text-rose-600 text-xs sm:text-sm">
-                $${montoVal.toFixed(2)}
-            </td>
-        `;
-
-        historyTableBody.appendChild(tr);
-    });
-}
 
 async function emitirCuotaJuevesSanto() {
     const fechaSelect =
@@ -2512,6 +1759,7 @@ async function emitirCuotaJuevesSanto() {
     `;
 
     const payload = {
+        id: createMovementId(),
         action: 'emit_cuota_jueves',
         fecha: formattedDate,
         monto: cuotaMonto,
@@ -2520,11 +1768,12 @@ async function emitirCuotaJuevesSanto() {
     };
 
     if (isDemoMode) {
-        attendees.forEach(persona => {
-            debts.unshift({
+        attendees.forEach((persona, index) => {
+            movements.unshift({
                 fecha: formattedDate,
                 persona: persona,
                 tipo: 'cuota_jueves',
+                id: `${payload.id}:${index}`,
                 monto: cuotaMonto,
                 concepto: concepto
             });
@@ -2563,7 +1812,7 @@ async function emitirCuotaJuevesSanto() {
             method: 'POST',
             mode: 'no-cors',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'text/plain;charset=utf-8'
             },
             body: JSON.stringify(payload)
         });
@@ -2572,11 +1821,12 @@ async function emitirCuotaJuevesSanto() {
          * Actualizamos inmediatamente la memoria local
          * para que la interfaz muestre la cuota.
          */
-        attendees.forEach(persona => {
-            debts.unshift({
+        attendees.forEach((persona, index) => {
+            movements.unshift({
                 fecha: formattedDate,
                 persona: persona,
                 tipo: 'cuota_jueves',
+                id: `${payload.id}:${index}`,
                 monto: cuotaMonto,
                 concepto: concepto
             });
@@ -2602,11 +1852,12 @@ async function emitirCuotaJuevesSanto() {
          * Aunque falle la sincronización visual,
          * mantenemos el registro local.
          */
-        attendees.forEach(persona => {
-            debts.unshift({
+        attendees.forEach((persona, index) => {
+            movements.unshift({
                 fecha: formattedDate,
                 persona: persona,
                 tipo: 'cuota_jueves',
+                id: `${payload.id}:${index}`,
                 monto: cuotaMonto,
                 concepto: concepto
             });

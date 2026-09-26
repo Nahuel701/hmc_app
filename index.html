@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Control de Gastos y Aportes</title>
+    <title>Registro financiero del club</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Inter Font -->
@@ -114,41 +114,11 @@
     
             <!-- NAVEGACIÓN -->
             <div class="main-tabs flex items-center bg-indigo-700/60 p-1 rounded-xl border border-indigo-500/40 mt-3">
-    
-                <button onclick="switchTab('cargar')"
-                        id="tabBtnCargar"
-                        class="px-4 py-1.5 text-xs font-semibold rounded-lg bg-white text-indigo-700 shadow-sm transition">
-                    Nuevo Movimiento
-                </button>
-    
-                <button onclick="switchTab('historial')"
-                        id="tabBtnHistorial"
-                        class="px-4 py-1.5 text-xs font-semibold rounded-lg text-indigo-100 hover:text-white transition">
-                    Historial
-                </button>
-    
-                <button onclick="switchTab('deudas')"
-                        id="tabBtnDeudas"
-                        class="px-4 py-1.5 text-xs font-semibold rounded-lg text-indigo-100 hover:text-white transition">
-                    Deudas y Reintegros
-                </button>
-    
-                <button onclick="switchTab('asistencia')"
-                        id="tabBtnAsistencia"
-                        class="px-4 py-1.5 text-xs font-semibold rounded-lg text-indigo-100 hover:text-white transition">
-                    Asistencia
-                </button>
-    
-                <button onclick="switchTab('jueves-santo')"
-                        id="tabBtnJuevesSanto"
-                        class="px-4 py-1.5 text-xs font-semibold rounded-lg text-indigo-100 hover:text-white transition flex items-center gap-1">
-    
-                    <span>🍷 Jueves Santo</span>
-    
-                </button>
-    
+                <button onclick="switchTab('cargar')" id="tabBtnCargar" class="px-4 py-1.5 text-xs font-semibold rounded-lg bg-white text-indigo-700 shadow-sm transition">Nuevo movimiento</button>
+                <button onclick="switchTab('deudas')" id="tabBtnDeudas" class="px-4 py-1.5 text-xs font-semibold rounded-lg text-indigo-100 hover:text-white transition">Deudas y reintegros</button>
+                <button onclick="switchTab('asistencia')" id="tabBtnAsistencia" class="px-4 py-1.5 text-xs font-semibold rounded-lg text-indigo-100 hover:text-white transition">Asistencia</button>
+                <button onclick="switchTab('jueves-santo')" id="tabBtnJuevesSanto" class="px-4 py-1.5 text-xs font-semibold rounded-lg text-indigo-100 hover:text-white transition flex items-center gap-1"><span>🍷 Jueves Santo</span></button>
             </div>
-    
         </div>
     
     </header>
@@ -182,12 +152,12 @@
         <div id="versionWarningBanner" class="hidden bg-amber-50 border border-amber-300 text-amber-900 p-4 rounded-2xl text-xs mb-6 shadow-sm space-y-1">
             <p class="font-bold flex items-center gap-1.5 text-amber-800">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-                Atención: Google Apps Script devolvió la versión anterior del código.
+                Atención: Apps Script todavía no está usando el Registro unificado.
             </p>
-            <p>Para cargar la lista de la pestaña <b>Miembros</b> y la hoja <b>Deudas</b>, recuerda actualizar el código en Google Apps Script e ir a: <b>Implementar > Gestionar implementaciones > Editar > Nueva versión > Implementar</b>.</p>
+            <p>Actualiza el código de Apps Script e implementa una versión nueva. La app leerá y escribirá los movimientos en la hoja <b>Registro</b>; los datos históricos se reconciliarán por separado.</p>
         </div>
 
-        <!-- TAB 1: CARGAR MOVIMIENTO -->
+        <!-- TAB: NUEVO MOVIMIENTO -->
         <div id="tabCargar" class="max-w-xl mx-auto">
             <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
                 <h2 class="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
@@ -198,9 +168,9 @@
                     <div>
                         <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Tipo</label>
                         <div class="grid grid-cols-3 gap-2">
-                            <button type="button" id="btnAporte" onclick="setType('aporte')" class="py-2.5 px-3 text-xs sm:text-sm font-semibold rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 transition text-center">Aporte (+)</button>
-                            <button type="button" id="btnGasto" onclick="setType('gasto')" class="py-2.5 px-3 text-xs sm:text-sm font-semibold rounded-xl border border-slate-200 bg-slate-50 text-slate-600 transition text-center">Gasto (-)</button>
-                            <button type="button" id="btnReintegro" onclick="setType('reintegro')" class="py-2.5 px-3 text-xs sm:text-sm font-semibold rounded-xl border border-slate-200 bg-slate-50 text-slate-600 transition text-center">Reintegro (↩)</button>
+                            <button type="button" id="btnGasto" onclick="setType('gasto')" class="py-2.5 px-3 text-xs sm:text-sm font-semibold rounded-xl border border-amber-200 bg-amber-50 text-amber-700 transition text-center">Gasto adelantado</button>
+                            <button type="button" id="btnReintegro" onclick="setType('reintegro')" class="py-2.5 px-3 text-xs sm:text-sm font-semibold rounded-xl border border-slate-200 bg-slate-50 text-slate-600 transition text-center">Reintegro</button>
+                            <button type="button" id="btnPagoCuota" onclick="setType('pago_cuota')" class="py-2.5 px-3 text-xs sm:text-sm font-semibold rounded-xl border border-slate-200 bg-slate-50 text-slate-600 transition text-center">Pago de cuota</button>
                         </div>
                     </div>
 
@@ -241,143 +211,34 @@
             </div>
         </div>
 
-        <!-- TAB 2: HISTORIAL DE MOVIMIENTOS -->
-        <div id="tabHistorial" class="space-y-6 hidden">
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-                <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
-                    <div>
-                        <h3 class="text-base font-bold text-slate-800">Historial de Movimientos</h3>
-                        <p class="text-xs text-slate-400">Todos los aportes y gastos registrados en la planilla.</p>
-                    </div>
-                    <button onclick="fetchSheetData()" class="self-start sm:self-auto text-xs bg-indigo-50 text-indigo-700 hover:bg-indigo-100 px-3 py-1.5 rounded-lg font-medium transition flex items-center gap-1.5">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-                        Sincronizar
-                    </button>
-                </div>
-                <div class="table-responsive max-h-[600px] overflow-y-auto">
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="border-b border-slate-100 text-xs font-semibold text-slate-400 uppercase sticky top-0 bg-white">
-                                <th class="pb-3 px-3">Fecha</th>
-                                <th class="pb-3 px-3">Persona</th>
-                                <th class="pb-3 px-3">Tipo</th>
-                                <th class="pb-3 px-3">Concepto</th>
-                                <th class="pb-3 px-3 text-right">Monto</th>
-                            </tr>
-                        </thead>
-                        <tbody id="transactionTableBody" class="text-sm divide-y divide-slate-50">
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- TAB 2: RESUMEN -->
-        <div id="tabResumen" class="space-y-6 hidden">
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between">
-                    <div>
-                        <p class="text-xs font-semibold text-emerald-600 uppercase">Total Aportes Generales</p>
-                        <p id="totalAportes" class="text-2xl font-bold text-emerald-700 mt-1">$0.00</p>
-                    </div>
-                    <div class="bg-emerald-50 p-3 rounded-2xl border border-emerald-100">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                    </div>
-                </div>
-                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between">
-                    <div>
-                        <p class="text-xs font-semibold text-rose-600 uppercase">Total Gastos Generales</p>
-                        <p id="totalGastos" class="text-2xl font-bold text-rose-700 mt-1">$0.00</p>
-                    </div>
-                    <div class="bg-rose-50 p-3 rounded-2xl border border-rose-100">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-rose-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>
-                    </div>
-                </div>
-            </div>
-
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-                <h3 class="text-base font-bold text-slate-800 mb-1">Estado de Cuentas por Persona</h3>
-                <p class="text-xs text-slate-400 mb-4">Balance Neto = Total Aportes - Total Gastos de cada integrante.</p>
-                
-                <div class="table-responsive">
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="border-b border-slate-100 text-xs font-semibold text-slate-400 uppercase">
-                                <th class="pb-3 px-3">Persona</th>
-                                <th class="pb-3 px-3 text-right">Aportes</th>
-                                <th class="pb-3 px-3 text-right">Gastos</th>
-                                <th class="pb-3 px-3 text-right">Balance Neto</th>
-                            </tr>
-                        </thead>
-                        <tbody id="summaryTableBody" class="text-sm divide-y divide-slate-50">
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- TAB 4: DEUDAS Y REINTEGROS -->
+        <!-- TAB: DEUDAS Y REINTEGROS -->
         <div id="tabDeudas" class="space-y-6 hidden">
-            <!-- Métricas de Deuda -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between">
-                    <div>
-                        <p class="text-xs font-semibold text-amber-600 uppercase">Total Deuda Pendiente del Club</p>
-                        <p id="totalDeudaPendiente" class="text-2xl font-bold text-amber-700 mt-1">$0.00</p>
-                        <p class="text-[11px] text-slate-400 mt-0.5">Dinero a favor de miembros pendiente de reintegro</p>
-                    </div>
-                    <div class="bg-amber-50 p-3 rounded-2xl border border-amber-100">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                    </div>
-                </div>
-                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between">
-                    <div>
-                        <p class="text-xs font-semibold text-indigo-600 uppercase">Total Reintegrado a Miembros</p>
-                        <p id="totalReintegrado" class="text-2xl font-bold text-indigo-700 mt-1">$0.00</p>
-                        <p class="text-[11px] text-slate-400 mt-0.5">Pagos ya devueltos para saldar deudas</p>
-                    </div>
-                    <div class="bg-indigo-50 p-3 rounded-2xl border border-indigo-100">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Tabla de Deuda por Miembro -->
             <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-                <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-4">
-                    <div>
-                        <h3 class="text-base font-bold text-slate-800">Estado de Deudas y Cuotas por Miembro</h3>
-                        <p class="text-xs text-slate-400">Gastos a favor del miembro compensados con sus cuotas adeudadas de Jueves Santo.</p>
-                    </div>
+                <div class="mb-4">
+                    <h3 class="text-base font-bold text-slate-800">Saldos pendientes por miembro</h3>
+                    <p class="text-xs text-slate-400">Solo aparecen miembros cuyo neto sigue pendiente. Los saldos compensados quedan en el historial.</p>
                 </div>
                 <div class="table-responsive">
                     <table class="w-full text-left border-collapse">
                         <thead>
                             <tr class="border-b border-slate-100 text-xs font-semibold text-slate-400 uppercase">
                                 <th class="pb-3 px-3">Miembro</th>
-                                <th class="pb-3 px-3 text-right">Gastos Asumidos (+)</th>
-                                <th class="pb-3 px-3 text-right">Reintegros (↩)</th>
-                                <th class="pb-3 px-3 text-right">Cuotas J. Santo (-)</th>
-                                <th class="pb-3 px-3 text-right">Balance Neto</th>
-                                <th class="pb-3 px-3 text-center">Situación</th>
+                                <th class="pb-3 px-3 text-right">Debe el miembro</th>
+                                <th class="pb-3 px-3 text-right">Debe el club</th>
+                                <th class="pb-3 px-3 text-right">Neto</th>
                             </tr>
                         </thead>
-                        <tbody id="debtsSummaryTableBody" class="text-sm divide-y divide-slate-50">
-                        </tbody>
+                        <tbody id="debtsSummaryTableBody" class="text-sm divide-y divide-slate-50"></tbody>
                     </table>
                 </div>
             </div>
 
-            <!-- Historial de Hoja Deudas y Reintegros -->
+            <!-- Historial completo, incluyendo movimientos ya saldados -->
             <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
                 <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
                     <div>
-                        <h3 class="text-base font-bold text-slate-800">Historial de Deudas y Reintegros</h3>
-                        <p class="text-xs text-slate-400">Registros de la hoja 'Deudas' (Gastos contraídos y Reintegros saldados).</p>
+                        <h3 class="text-base font-bold text-slate-800">Historial de movimientos</h3>
+                        <p class="text-xs text-slate-400">Cada registro se guarda una sola vez; los movimientos saldados siguen visibles aquí.</p>
                     </div>
                 </div>
                 <div class="overflow-x-auto max-h-[450px] overflow-y-auto">
@@ -398,7 +259,7 @@
             </div>
         </div>
 
-        <!-- TAB 5: ASISTENCIA -->
+        <!-- TAB: ASISTENCIA -->
         <div id="tabAsistencia" class="space-y-6 hidden">
             <!-- 1. Pase de Asistencia Rápida (Elemento Principal - Arriba) -->
             <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 max-w-3xl mx-auto">
@@ -542,7 +403,7 @@
             </div>
         </div>
 
-        <!-- TAB 5: JUEVES SANTO -->
+        <!-- TAB: JUEVES SANTO -->
         <div id="tabJuevesSanto" class="space-y-6 hidden">
             <!-- Encabezado y Explicación -->
             <div class="bg-gradient-to-r from-indigo-900 via-indigo-800 to-slate-900 text-white p-6 sm:p-7 rounded-3xl shadow-lg relative overflow-hidden">
@@ -552,7 +413,7 @@
                     </span>
                     <h2 class="text-2xl font-black tracking-tight">Jueves Santo</h2>
                     <p class="text-xs sm:text-sm text-indigo-200 leading-relaxed">
-                        Cálculo de la cuota solidaria para saldar las deudas acumuladas del club. Se divide equitativamente entre los miembros que hayan asistido el jueves y se redondea hacia arriba al múltiplo de 5 para asegurar superávit a favor del club.
+                        La cuota cubre el saldo neto que el club todavía debe a sus miembros por gastos adelantados, descontando reintegros y cuotas ya adeudadas. Se divide entre los asistentes y se redondea hacia arriba al múltiplo de $5.
                     </p>
                 </div>
             </div>
@@ -576,7 +437,7 @@
                     <div>
                         <p class="text-xs font-semibold text-indigo-600 uppercase">Asistentes Presentes</p>
                         <p id="jsPresentCount" class="text-2xl font-bold text-indigo-700 mt-1">0</p>
-                        <p class="text-[11px] text-slate-400 mt-0.5">Miembros obligados al aporte</p>
+                        <p class="text-[11px] text-slate-400 mt-0.5">Miembros presentes</p>
                     </div>
                     <div class="bg-indigo-50 p-3 rounded-2xl border border-indigo-100">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -654,7 +515,7 @@
                             <thead>
                                 <tr class="border-b border-slate-100 bg-slate-50/70 text-[11px] font-semibold text-slate-400 uppercase">
                                     <th class="py-3 px-4">Miembro Presente</th>
-                                    <th class="py-3 px-4 text-right">Gastos Previos a Favor</th>
+                                    <th class="py-3 px-4 text-right">Neto previo del club</th>
                                     <th class="py-3 px-4 text-right">Cuota Asignada</th>
                                     <th class="py-3 px-4 text-right">Impacto en Balance</th>
                                     <th class="py-3 px-4 text-center">Estado Posterior</th>
@@ -670,25 +531,7 @@
                 </div>
             </div>
 
-            <!-- Historial de Cuotas Emitidas de Jueves Santo -->
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-                <h3 class="text-base font-bold text-slate-800 mb-1">Historial de Cuotas Emitidas</h3>
-                <p class="text-xs text-slate-400 mb-4">Registro de cuotas fijadas por Jueves Santo y su impacto en las deudas.</p>
-                <div class="overflow-x-auto max-h-[400px] overflow-y-auto">
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="border-b border-slate-100 text-xs font-semibold text-slate-400 uppercase sticky top-0 bg-white">
-                                <th class="pb-3 px-3">Fecha</th>
-                                <th class="pb-3 px-3">Miembro</th>
-                                <th class="pb-3 px-3">Concepto</th>
-                                <th class="pb-3 px-3 text-right">Monto Cuota</th>
-                            </tr>
-                        </thead>
-                        <tbody id="jsHistoryTableBody" class="text-sm divide-y divide-slate-50">
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+
         </div>
 
     </main>
