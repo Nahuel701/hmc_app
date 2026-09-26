@@ -7,6 +7,14 @@ let isDemoMode = false;
 
 // URL de tu Google Apps Script implementado como Web App
 const scriptUrl = 'https://script.google.com/macros/s/AKfycbwpNjT07qbcrfoendV7KxoSLpYgfXjce4cjYbgDmP_268jsVRVobCJTLgMDdqNp7_I/exec';
+const useSupabase = Boolean(window.hmcSupabase?.enabled);
+
+async function supabaseApi(action, payload) {
+    return window.hmcSupabase.request('api', {
+        method: action === 'getdata' ? 'GET' : 'POST',
+        ...(action === 'getdata' ? {} : { body: JSON.stringify({ ...payload, action }) })
+    });
+}
 
 const memoryStorage = {};
 const safeStorage = {
@@ -67,10 +75,10 @@ async function handleLogin(e) {
     const err = document.getElementById('loginError');
 
     btn.disabled = true;
-    btn.textContent = "Verificando con Google Sheet...";
+    btn.textContent = useSupabase ? "Verificando..." : "Verificando con Google Sheets...";
     err.classList.add('hidden');
 
-    if ((user === 'admin' && pass === '1234') || (!user && !pass)) {
+    if (!useSupabase && ((user === 'admin' && pass === '1234') || (!user && !pass))) {
         safeStorage.setItem('cc_logged', 'true');
         document.getElementById('loginScreen').classList.add('hidden');
         fetchSheetData();
@@ -81,6 +89,15 @@ async function handleLogin(e) {
     }
 
     try {
+        if (useSupabase) {
+            await window.hmcSupabase.login(user, pass);
+            safeStorage.setItem('cc_logged', 'true');
+            document.getElementById('loginScreen').classList.add('hidden');
+            await fetchSheetData();
+            btn.disabled = false;
+            btn.textContent = "Acceder al Sistema";
+            return;
+        }
         const res = await fetch(
             `${scriptUrl}?action=login&user=${encodeURIComponent(user)}&pass=${encodeURIComponent(pass)}`
         );
@@ -96,7 +113,12 @@ async function handleLogin(e) {
         }
     } catch (error) {
         console.error(error);
-        enableDemoMode("Conexión con Google Sheets fallida. Iniciando en Modo Demo...");
+        if (useSupabase) {
+            err.textContent = error.message || 'No se pudo iniciar sesión.';
+            err.classList.remove('hidden');
+        } else {
+            enableDemoMode("Conexión con Google Sheets fallida. Iniciando en Modo Demo...");
+        }
     }
 
     btn.disabled = false;
@@ -105,6 +127,7 @@ async function handleLogin(e) {
 
 function logout() {
     safeStorage.removeItem('cc_logged');
+    window.hmcSupabase?.logout();
     document.getElementById('loginScreen').classList.remove('hidden');
     document.getElementById('loginPass').value = '';
 }
@@ -432,7 +455,9 @@ async function addTransaction(e) {
     }
 
     try {
-        await fetch(scriptUrl, {
+        if (useSupabase) {
+            await supabaseApi('add', newTx);
+        } else await fetch(scriptUrl, {
             method: 'POST',
             mode: 'no-cors',
             headers: {
@@ -447,6 +472,11 @@ async function addTransaction(e) {
 
     } catch (err) {
         console.error(err);
+
+        if (useSupabase) {
+            alert(`No se pudo guardar el movimiento: ${err.message}`);
+            return;
+        }
 
         if (
             currentType === 'aporte' ||
@@ -489,6 +519,17 @@ async function fetchSheetData() {
         document.getElementById('syncStatusText');
 
     try {
+        if (useSupabase) {
+            const data = await supabaseApi('getdata');
+            warningBanner.classList.add('hidden');
+            syncStatusText.textContent = '🟢 Sincronizado con Supabase';
+            transactions = [...(data.transactions || [])];
+            debts = [...(data.debts || [])];
+            members = [...(data.members || [])];
+            attendance = [...(data.attendance || [])];
+            renderApp();
+            return;
+        }
         // ------------------------------------------------
         // FORZAR ACTUALIZACIÓN
         // Agregamos un parámetro único para evitar cache
@@ -522,8 +563,9 @@ async function fetchSheetData() {
 
             warningBanner.classList.add('hidden');
 
-            syncStatusText.textContent =
-                "🟢 Sincronizado correctamente con Google Sheets";
+            syncStatusText.textContent = useSupabase
+                ? '🟢 Sincronizado con Supabase'
+                : '🟢 Sincronizado correctamente con Google Sheets';
 
             if (Array.isArray(data.transactions)) {
                 transactions =
@@ -574,9 +616,11 @@ async function fetchSheetData() {
             err
         );
 
-        enableDemoMode(
-            "💡 No se pudo conectar con Google Sheets. Modo Demo Activo."
-        );
+        if (useSupabase) {
+            syncStatusText.textContent = `🔴 Error de Supabase: ${err.message}`;
+        } else {
+            enableDemoMode("💡 No se pudo conectar con Google Sheets. Modo Demo Activo.");
+        }
     }
 }
 
@@ -1622,7 +1666,9 @@ async function saveAttendance(e) {
     }
 
     try {
-        await fetch(scriptUrl, {
+        if (useSupabase) {
+            await supabaseApi('save_attendance', payload);
+        } else await fetch(scriptUrl, {
             method: 'POST',
             mode: 'no-cors',
             headers: {
@@ -1667,6 +1713,11 @@ async function saveAttendance(e) {
 
     } catch (err) {
         console.error(err);
+
+        if (useSupabase) {
+            alert(`No se pudo guardar la asistencia: ${err.message}`);
+            return;
+        }
 
         attendance = attendance.filter(item => {
 
@@ -2535,7 +2586,9 @@ async function emitirCuotaJuevesSanto() {
     }
 
     try {
-        await fetch(scriptUrl, {
+        if (useSupabase) {
+            await supabaseApi('emit_cuota_jueves', payload);
+        } else await fetch(scriptUrl, {
             method: 'POST',
             mode: 'no-cors',
             headers: {
@@ -2573,6 +2626,12 @@ async function emitirCuotaJuevesSanto() {
 
     } catch (err) {
         console.error(err);
+
+        if (useSupabase) {
+            alert(`No se pudo emitir la cuota: ${err.message}`);
+            btn.disabled = false;
+            return;
+        }
 
         /*
          * Aunque falle la sincronización visual,
@@ -2651,7 +2710,15 @@ document.addEventListener(
          * Si ya estaba logueado, entramos directamente
          * y FORZAMOS la sincronización con Google Sheets.
          */
-        if (
+        if (useSupabase) {
+            const user = await window.hmcSupabase.currentUser();
+            if (user) {
+                loginScreen.classList.add('hidden');
+                await fetchSheetData();
+            } else {
+                safeStorage.removeItem('cc_logged');
+            }
+        } else if (
             safeStorage.getItem('cc_logged') ===
             'true'
         ) {
