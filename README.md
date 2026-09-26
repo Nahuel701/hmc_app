@@ -21,3 +21,5 @@ La hoja `Registro` es la única fuente de movimientos financieros. Su formato es
 ## Publicación de Apps Script
 
 Un push de este repositorio actualiza el frontend publicado desde GitHub Pages, pero no actualiza el Web App de Google Apps Script. Para activar la lectura y escritura de `Registro`, copia `code.gs` al proyecto de Apps Script y crea una nueva implementación del Web App. El frontend espera la respuesta con `schemaVersion: 2` y el arreglo `movements`.
+
+Las pruebas del parser de montos del Apps Script se ejecutan con `node --test tests/code-gs.test.cjs`.

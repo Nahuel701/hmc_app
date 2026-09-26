@@ -46,7 +46,7 @@ function doPost(e) {
     if (payload.action === 'add') {
       const allowedTypes = ['gasto', 'reintegro', 'pago_cuota'];
       const tipo = (payload.tipo || '').toString().trim().toLowerCase();
-      const monto = parseFloat(payload.monto);
+      const monto = parseMoney(payload.monto);
       if (!allowedTypes.includes(tipo) || !payload.persona || !Number.isFinite(monto) || monto <= 0) {
         return createJsonResponse({ status: 'error', message: 'Movimiento inválido' });
       }
@@ -120,7 +120,7 @@ function doPost(e) {
       const ss = SpreadsheetApp.getActiveSpreadsheet();
       const registry = getOrCreateRegistrySheet(ss);
       const fecha = (payload.fecha || '').toString().trim();
-      const cuota = parseFloat(payload.monto) || 0;
+      const cuota = parseMoney(payload.monto) || 0;
       const concepto = (payload.concepto || 'Cuota Jueves Santo').toString().trim();
       const asistentes = payload.asistentes || [];
       const operationId = (payload.id || Utilities.getUuid()).toString();
@@ -210,11 +210,43 @@ function mapMovementRows(data) {
       fecha: formattedDate,
       persona: row[2] || '',
       tipo: (row[3] || '').toString().trim().toLowerCase(),
-      monto: parseFloat(row[4]) || 0,
+      monto: parseMoney(row[4]),
       concepto: row[5] || ''
     });
+    if (!Number.isFinite(movements[movements.length - 1].monto)) {
+      throw new Error('Monto inválido en Registro, fila ' + (i + 1));
+    }
   }
   return movements;
+}
+
+/** Convierte montos numéricos o textos monetarios con formatos es-AR/en-US. */
+function parseMoney(value) {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : NaN;
+  if (value === null || value === undefined || value === '') return NaN;
+
+  let text = value.toString().trim().replace(/[^\d,.-]/g, '');
+  if (!text || !/\d/.test(text)) return NaN;
+
+  const comma = text.lastIndexOf(',');
+  const dot = text.lastIndexOf('.');
+  if (comma >= 0 && dot >= 0) {
+    // El separador que aparece más a la derecha es el decimal; el otro agrupa miles.
+    if (comma > dot) text = text.replace(/\./g, '').replace(',', '.');
+    else text = text.replace(/,/g, '');
+  } else if (comma >= 0 || dot >= 0) {
+    const separator = comma >= 0 ? ',' : '.';
+    const parts = text.split(separator);
+    const trailingDigits = (parts[parts.length - 1] || '').length;
+    if (parts.length > 2 || trailingDigits === 3) {
+      text = text.split(separator).join('');
+    } else if (separator === ',') {
+      text = text.replace(',', '.');
+    }
+  }
+
+  const amount = Number(text);
+  return Number.isFinite(amount) ? amount : NaN;
 }
 
 function getAttendanceData() {
