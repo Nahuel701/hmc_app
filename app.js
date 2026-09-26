@@ -517,8 +517,11 @@ async function fetchSheetData(options = {}) {
         document.getElementById('syncStatusText');
 
     try {
-        sheetDataRequest = fetch(`${scriptUrl}?action=getdata`, { method: 'GET' })
-            .then(res => res.json());
+        const cacheBuster = Date.now();
+        sheetDataRequest = fetch(
+            `${scriptUrl}?action=getdata&_=${cacheBuster}`,
+            { method: 'GET', cache: 'no-store' }
+        ).then(res => res.json());
         const data = await sheetDataRequest;
         cachedSheetData = data;
         cachedSheetDataAt = Date.now();
