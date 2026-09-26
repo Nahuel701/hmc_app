@@ -496,11 +496,23 @@ function buildMemberBalances(source = movements) {
     return balances;
 }
 
+function calculateClubNetBalance(source = movements) {
+    return source.reduce((net, movement) => {
+        const amount = parseFloat(movement.monto) || 0;
+        const type = (movement.tipo || '').toString().trim().toLowerCase();
+        if (type === 'gasto') return net + amount;
+        if (type === 'reintegro' || type === 'cuota_jueves') return net - amount;
+        if (type === 'pago_cuota') return net + amount;
+        return net;
+    }, 0);
+}
+
 function renderApp() {
     const personaSelect = document.getElementById('persona');
     const memberBadge = document.getElementById('memberCountBadge');
     const summaryBody = document.getElementById('debtsSummaryTableBody');
     const historyBody = document.getElementById('debtsTableBody');
+    const clubNetBalanceEl = document.getElementById('clubNetBalance');
     if (!personaSelect) return;
 
     personaSelect.innerHTML = '';
@@ -534,9 +546,24 @@ function renderApp() {
         personaSelect.appendChild(nonMember);
     }
 
+    const balances = buildMemberBalances();
+    const clubNet = calculateClubNetBalance();
+    if (clubNetBalanceEl) {
+        const amount = `$${Math.abs(clubNet).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        if (Math.abs(clubNet) <= 0.001) {
+            clubNetBalanceEl.textContent = `Saldado · ${amount}`;
+            clubNetBalanceEl.className = 'text-xl font-bold text-emerald-700';
+        } else if (clubNet > 0) {
+            clubNetBalanceEl.textContent = `Club debe ${amount}`;
+            clubNetBalanceEl.className = 'text-xl font-bold text-indigo-700';
+        } else {
+            clubNetBalanceEl.textContent = `Miembros deben ${amount}`;
+            clubNetBalanceEl.className = 'text-xl font-bold text-rose-700';
+        }
+    }
+
     if (summaryBody) {
         summaryBody.innerHTML = '';
-        const balances = buildMemberBalances();
         const pending = Object.entries(balances)
             .filter(([, balance]) => Math.abs(balance.net) > 0.001)
             .sort(([a], [b]) => a.localeCompare(b, 'es'));
@@ -1247,10 +1274,7 @@ function getAttendeesForDate(targetDate) {
 }
 
 function calculateClubDebtToSettle() {
-    const balances = Object.values(buildMemberBalances());
-    const clubOwesMembers = balances.reduce((sum, balance) => sum + balance.debtToMember, 0);
-    const membersOweClub = balances.reduce((sum, balance) => sum + balance.debtToClub, 0);
-    return Math.max(0, clubOwesMembers - membersOweClub);
+    return Math.max(0, calculateClubNetBalance());
 }
 
 function calculateSuggestedQuota(totalDebt, attendeeCount) {
