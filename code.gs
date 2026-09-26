@@ -200,7 +200,7 @@ function getDebtsData() {
     debts.push({
       fecha: formattedDate,
       persona: row[1] || '',
-      tipo: (row[2] || '').toString().toLowerCase(),
+      tipo: (row[2] || '').toString().trim().toLowerCase(),
       monto: parseFloat(row[3]) || 0,
       concepto: row[4] || ''
     });

@@ -888,7 +888,7 @@ function renderApp() {
                 parseFloat(d.monto) || 0;
 
             const tipo =
-                (d.tipo || '').toLowerCase();
+                (d.tipo || '').toString().trim().toLowerCase();
 
             if (!debtMap[d.persona]) {
                 debtMap[d.persona] = {
