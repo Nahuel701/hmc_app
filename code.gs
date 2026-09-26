@@ -57,8 +57,24 @@ function doPost(e) {
       const ss = SpreadsheetApp.getActiveSpreadsheet();
       const tipo = (payload.tipo || '').toString().toLowerCase();
 
-      // Deudas es la única fuente de verdad para todos los movimientos
-      // financieros. Esto evita duplicar aportes y gastos en otra hoja.
+      // Mantener los aportes y gastos generales en Movimientos para el
+      // registro de caja del club.
+      if (tipo === 'gasto' || tipo === 'aporte') {
+        let sheetMovimientos = ss.getSheetByName('Movimientos');
+        if (!sheetMovimientos) {
+          sheetMovimientos = ss.insertSheet('Movimientos');
+          sheetMovimientos.appendRow(['Fecha', 'Persona', 'Tipo', 'Monto', 'Concepto']);
+        }
+        sheetMovimientos.appendRow([
+          payload.fecha || '',
+          payload.persona || '',
+          tipo,
+          payload.monto || 0,
+          payload.concepto || ''
+        ]);
+      }
+
+      // Deudas sigue siendo la fuente para calcular saldos por miembro.
       if (tipo === 'gasto' || tipo === 'reintegro' || tipo === 'aporte') {
         let sheetDeudas = ss.getSheetByName('Deudas');
         if (!sheetDeudas) {

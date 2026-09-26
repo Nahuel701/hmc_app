@@ -451,14 +451,14 @@ async function addTransaction(e) {
             method: 'POST',
             mode: 'no-cors',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'text/plain;charset=utf-8'
             },
             body: JSON.stringify(newTx)
         });
 
         setTimeout(() => {
             fetchSheetData({ force: true });
-        }, 100);
+        }, 1200);
 
     } catch (err) {
         console.error(err);
