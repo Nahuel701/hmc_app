@@ -7,6 +7,11 @@ let isDemoMode = false;
 
 // URL de tu Google Apps Script implementado como Web App
 const scriptUrl = 'https://script.google.com/macros/s/AKfycbwpNjT07qbcrfoendV7KxoSLpYgfXjce4cjYbgDmP_268jsVRVobCJTLgMDdqNp7_I/exec';
+const DATA_CACHE_TTL_MS = 30 * 1000;
+const DATA_CACHE_KEY = 'cc_sheet_data_cache';
+let cachedSheetData = null;
+let cachedSheetDataAt = 0;
+let sheetDataRequest = null;
 
 const memoryStorage = {};
 const safeStorage = {
@@ -32,6 +37,16 @@ const safeStorage = {
         }
     }
 };
+
+try {
+    const storedCache = JSON.parse(safeStorage.getItem(DATA_CACHE_KEY) || 'null');
+    if (storedCache && Date.now() - storedCache.savedAt < DATA_CACHE_TTL_MS) {
+        cachedSheetData = storedCache.data;
+        cachedSheetDataAt = storedCache.savedAt;
+    }
+} catch (e) {
+    // Se ignora la caché inválida y se consulta Sheets.
+}
 
 const mockMembers = ['Juan Pérez', 'María Gómez', 'Carlos Rodríguez', 'Ana Martínez'];
 const mockTransactions = [
@@ -90,7 +105,7 @@ async function handleLogin(e) {
         if (data.status === 'success') {
             safeStorage.setItem('cc_logged', 'true');
             document.getElementById('loginScreen').classList.add('hidden');
-            fetchSheetData();
+            fetchSheetData({ force: true });
         } else {
             err.classList.remove('hidden');
         }
@@ -442,7 +457,7 @@ async function addTransaction(e) {
         });
 
         setTimeout(() => {
-            fetchSheetData();
+            fetchSheetData({ force: true });
         }, 100);
 
     } catch (err) {
@@ -476,11 +491,24 @@ async function addTransaction(e) {
     setType('aporte');
 }
 
-async function fetchSheetData() {
+async function fetchSheetData(options = {}) {
     if (isDemoMode) {
         renderApp();
         return;
     }
+
+    const forceRefresh = options.force === true;
+    const now = Date.now();
+    if (!forceRefresh && cachedSheetData && now - cachedSheetDataAt < DATA_CACHE_TTL_MS) {
+        applySheetData(cachedSheetData);
+        renderApp();
+        return;
+    }
+    if (sheetDataRequest) {
+        await sheetDataRequest;
+        return;
+    }
+    cachedSheetDataAt = 0;
 
     const warningBanner =
         document.getElementById('versionWarningBanner');
@@ -489,23 +517,29 @@ async function fetchSheetData() {
         document.getElementById('syncStatusText');
 
     try {
-        // ------------------------------------------------
-        // FORZAR ACTUALIZACIÓN
-        // Agregamos un parámetro único para evitar cache
-        // del navegador.
-        // ------------------------------------------------
-        const cacheBuster = Date.now();
+        sheetDataRequest = fetch(`${scriptUrl}?action=getdata`, { method: 'GET' })
+            .then(res => res.json());
+        const data = await sheetDataRequest;
+        cachedSheetData = data;
+        cachedSheetDataAt = Date.now();
+        safeStorage.setItem(DATA_CACHE_KEY, JSON.stringify({
+            savedAt: cachedSheetDataAt,
+            data
+        }));
 
-        const res = await fetch(
-            `${scriptUrl}?action=getdata&_=${cacheBuster}`,
-            {
-                method: 'GET',
-                cache: 'no-store'
-            }
-        );
+        applySheetData(data);
+        renderApp();
+    } catch (err) {
+        console.error("No se pudo sincronizar con Google Sheets:", err);
+        enableDemoMode("💡 No se pudo conectar con Google Sheets. Modo Demo Activo.");
+    } finally {
+        sheetDataRequest = null;
+    }
+}
 
-        const data = await res.json();
-
+function applySheetData(data) {
+        const warningBanner = document.getElementById('versionWarningBanner');
+        const syncStatusText = document.getElementById('syncStatusText');
         if (Array.isArray(data)) {
 
             transactions = [...data].reverse();
@@ -565,19 +599,6 @@ async function fetchSheetData() {
             }
         }
 
-        renderApp();
-
-    } catch (err) {
-
-        console.error(
-            "No se pudo sincronizar con Google Sheets:",
-            err
-        );
-
-        enableDemoMode(
-            "💡 No se pudo conectar con Google Sheets. Modo Demo Activo."
-        );
-    }
 }
 
 function enableDemoMode(statusMsg) {
@@ -1662,7 +1683,7 @@ async function saveAttendance(e) {
         renderApp();
 
         setTimeout(() => {
-            fetchSheetData();
+            fetchSheetData({ force: true });
         }, 1200);
 
     } catch (err) {
@@ -2564,7 +2585,7 @@ async function emitirCuotaJuevesSanto() {
          * Después sincronizamos nuevamente con Sheets.
          */
         setTimeout(() => {
-            fetchSheetData();
+            fetchSheetData({ force: true });
         }, 1200);
 
         alert(

@@ -17,11 +17,23 @@ function doGet(e) {
     
     // 2. Manejo de obtención de datos (Transacciones + Lista de Miembros + Deudas + Asistencia)
     if (action === 'getdata') {
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      const membersSheet = ss.getSheetByName('Miembros');
+      const debtsSheet = ss.getSheetByName('Deudas');
+      const attendanceSheet = ss.getSheetByName('Asistencia');
+      const membersRows = readSheetRows(membersSheet, 1);
+      const debtsRows = readSheetRows(debtsSheet, 5);
+      const attendanceRows = readSheetRows(attendanceSheet, 4);
+      const debts = mapDebtRows(debtsRows);
+
       const data = {
-        transactions: getTransactionsData(),
-        members: getMembersData(),
-        debts: getDebtsData(),
-        attendance: getAttendanceData()
+        transactions: debts.filter(d => d.tipo === 'gasto' || d.tipo === 'aporte'),
+        members: membersRows.slice(1)
+          .map(row => row[0])
+          .filter(name => name && name.toString().trim() !== '')
+          .map(name => name.toString().trim()),
+        debts: debts,
+        attendance: mapAttendanceRows(attendanceRows)
       };
       return createJsonResponse(data);
     }
@@ -153,7 +165,7 @@ function getMembersData() {
   
   if (!sheet) return [];
 
-  const data = sheet.getDataRange().getValues();
+  const data = readSheetRows(sheet, 1);
   if (data.length <= 1) return [];
 
   const members = [];
@@ -181,8 +193,14 @@ function getDebtsData() {
   
   if (!sheet) return [];
 
-  const data = sheet.getDataRange().getValues();
+  const data = readSheetRows(sheet, 5);
   if (data.length <= 1) return [];
+
+  return mapDebtRows(data);
+}
+
+function mapDebtRows(data) {
+  if (!data || data.length <= 1) return [];
 
   const debts = [];
 
@@ -215,8 +233,14 @@ function getAttendanceData() {
   
   if (!sheet) return [];
 
-  const data = sheet.getDataRange().getValues();
+  const data = readSheetRows(sheet, 4);
   if (data.length <= 1) return [];
+
+  return mapAttendanceRows(data);
+}
+
+function mapAttendanceRows(data) {
+  if (!data || data.length <= 1) return [];
 
   const attendance = [];
 
@@ -240,6 +264,13 @@ function getAttendanceData() {
   }
 
   return attendance;
+}
+
+function readSheetRows(sheet, columnCount) {
+  if (!sheet) return [];
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 1) return [];
+  return sheet.getRange(1, 1, lastRow, columnCount).getValues();
 }
 
 function checkCredentials(user, pass) {
