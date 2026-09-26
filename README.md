@@ -16,4 +16,8 @@ Este proyecto está dividido en un frontend web estándar (index.html, styles.cs
 
 La hoja `Registro` es la única fuente de movimientos financieros. Su formato es `ID | Fecha | Persona | Tipo | Monto | Concepto`. Los tipos son `gasto`, `reintegro`, `cuota_jueves` y `pago_cuota`. Los saldos por miembro y la cuota sugerida de Jueves Santo se calculan desde esas filas.
 
-`Deudas` y `Movimientos` quedan intactas como fuentes históricas mientras se prepara una reconciliación por separado; la versión actual de la app no las lee ni les agrega registros. No publiques esta versión de Apps Script hasta estar listo para empezar a operar con `Registro`.
+`Registro` ya está incorporada y es la única fuente financiera que lee y actualiza la app. Las pestañas `Deudas` y `Movimientos` se conservan como historial; no se leen ni se modifican.
+
+## Publicación de Apps Script
+
+Un push de este repositorio actualiza el frontend publicado desde GitHub Pages, pero no actualiza el Web App de Google Apps Script. Para activar la lectura y escritura de `Registro`, copia `code.gs` al proyecto de Apps Script y crea una nueva implementación del Web App. El frontend espera la respuesta con `schemaVersion: 2` y el arreglo `movements`.
