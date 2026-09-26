@@ -497,13 +497,29 @@ function buildMemberBalances(source = movements) {
 }
 
 function calculateClubNetBalance(source = movements) {
-    return source.reduce((net, movement) => {
+    const memberNet = Object.values(buildMemberBalances(source))
+        .reduce((net, balance) => net + balance.net, 0);
+    return memberNet - calculateGuestQuotaCredits(source);
+}
+
+function calculateGuestQuotaCredits(source = movements) {
+    const cuotasByPerson = new Map();
+    source.forEach(movement => {
+        const person = (movement.persona || '').toString().trim();
+        if (!person) return;
+        const key = person.toLocaleLowerCase('es');
+        const totals = cuotasByPerson.get(key) || { issued: 0, paid: 0 };
         const amount = parseFloat(movement.monto) || 0;
         const type = (movement.tipo || '').toString().trim().toLowerCase();
-        if (type === 'gasto') return net + amount;
-        if (type === 'reintegro' || type === 'cuota_jueves') return net - amount;
-        if (type === 'pago_cuota') return net + amount;
-        return net;
+        if (type === 'cuota_jueves') totals.issued += amount;
+        else if (type === 'pago_cuota') totals.paid += amount;
+        cuotasByPerson.set(key, totals);
+    });
+
+    return [...cuotasByPerson.entries()].reduce((credits, [person, totals]) => {
+        const isMember = members.some(member => member.toString().trim().toLocaleLowerCase('es') === person);
+        if (isMember) return credits;
+        return credits + Math.max(0, totals.paid - totals.issued);
     }, 0);
 }
 
@@ -548,8 +564,14 @@ function renderApp() {
 
     const balances = buildMemberBalances();
     const clubNet = calculateClubNetBalance();
+    const guestQuotaCredits = calculateGuestQuotaCredits();
     if (clubNetBalanceEl) {
         const amount = `$${Math.abs(clubNet).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        const credits = `$${guestQuotaCredits.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        const clubNetDetailEl = document.getElementById('clubNetBalanceDetail');
+        if (clubNetDetailEl) {
+            clubNetDetailEl.textContent = `Neto de miembros menos créditos de cuotas de invitados (${credits}).`;
+        }
         if (Math.abs(clubNet) <= 0.001) {
             clubNetBalanceEl.textContent = `Saldado · ${amount}`;
             clubNetBalanceEl.className = 'text-xl font-bold text-emerald-700';

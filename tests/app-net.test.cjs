@@ -38,3 +38,20 @@ test('club net can show when members owe more than the club', () => {
   `, context);
   assert.equal(net, -30000);
 });
+
+test('guest quota payments are club credits applied to member expenses', () => {
+  const result = vm.runInContext(`
+    members = ['Ruso'];
+    movements = [
+      { persona: 'Ruso', tipo: 'gasto', monto: 281300 },
+      { persona: 'Ruso', tipo: 'reintegro', monto: 57500 },
+      { persona: 'Ruso', tipo: 'cuota_jueves', monto: 100000 },
+      { persona: 'Ruso', tipo: 'pago_cuota', monto: 30000 },
+      { persona: 'Amigo Gaspo 1', tipo: 'pago_cuota', monto: 30000 },
+      { persona: 'Hermano Gaspo', tipo: 'pago_cuota', monto: 30000 },
+    ];
+    ({ net: calculateClubNetBalance(), guestCredit: calculateGuestQuotaCredits() });
+  `, context);
+  assert.equal(result.net, 93800);
+  assert.equal(result.guestCredit, 60000);
+});
