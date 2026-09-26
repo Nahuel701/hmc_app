@@ -22,6 +22,6 @@ La hoja `Registro` es la única fuente de movimientos financieros. Su formato es
 
 Un push de este repositorio actualiza el frontend publicado desde GitHub Pages, pero no actualiza el Web App de Google Apps Script. Para activar la lectura y escritura de `Registro`, copia `code.gs` al proyecto de Apps Script y crea una nueva implementación del Web App. El frontend espera la respuesta con `schemaVersion: 2` y el arreglo `movements`.
 
-En `Deudas y Reintegros`, el neto global suma los saldos netos por miembro y descuenta los pagos de cuotas de invitados que no tienen un cargo de cuota asociado. Esos pagos son créditos del club para cubrir reintegros. Un saldo positivo indica que el club debe; uno negativo, que deben los miembros.
+En `Deudas y Reintegros`, el saldo neto global resta los saldos netos a reintegrar a miembros de los pagos de cuotas de invitados que no tienen un cargo de cuota asociado. Esos pagos son créditos del club para cubrir reintegros. Un saldo negativo indica que queda un importe neto por reintegrar; uno positivo, que quedan créditos a favor del club.
 
 Las pruebas se ejecutan con `node --test tests/*.test.cjs`.

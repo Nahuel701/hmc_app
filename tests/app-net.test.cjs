@@ -27,7 +27,7 @@ test('club net offsets expenses by reimbursements and outstanding Thursday fees'
     ];
     calculateClubNetBalance();
   `, context);
-  assert.equal(net, 9000);
+  assert.equal(net, -9000);
 });
 
 test('club net can show when members owe more than the club', () => {
@@ -36,7 +36,7 @@ test('club net can show when members owe more than the club', () => {
     movements = [{ persona: 'Pata', tipo: 'cuota_jueves', monto: 30000 }];
     calculateClubNetBalance();
   `, context);
-  assert.equal(net, -30000);
+  assert.equal(net, 30000);
 });
 
 test('guest quota payments are club credits applied to member expenses', () => {
@@ -50,8 +50,13 @@ test('guest quota payments are club credits applied to member expenses', () => {
       { persona: 'Amigo Gaspo 1', tipo: 'pago_cuota', monto: 30000 },
       { persona: 'Hermano Gaspo', tipo: 'pago_cuota', monto: 30000 },
     ];
-    ({ net: calculateClubNetBalance(), guestCredit: calculateGuestQuotaCredits() });
+    ({
+      net: calculateClubNetBalance(),
+      guestCredit: calculateGuestQuotaCredits(),
+      debtToSettle: calculateClubDebtToSettle(),
+    });
   `, context);
-  assert.equal(result.net, 93800);
+  assert.equal(result.net, -93800);
   assert.equal(result.guestCredit, 60000);
+  assert.equal(result.debtToSettle, 93800);
 });
