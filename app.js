@@ -564,14 +564,8 @@ function renderApp() {
 
     const balances = buildMemberBalances();
     const clubNet = calculateClubNetBalance();
-    const guestQuotaCredits = calculateGuestQuotaCredits();
     if (clubNetBalanceEl) {
         const amount = `${clubNet < -0.001 ? '-$' : '$'}${Math.abs(clubNet).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-        const credits = `$${guestQuotaCredits.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-        const clubNetDetailEl = document.getElementById('clubNetBalanceDetail');
-        if (clubNetDetailEl) {
-            clubNetDetailEl.textContent = `Créditos de cuotas de invitados (${credits}) menos saldos a reintegrar a miembros.`;
-        }
         if (Math.abs(clubNet) <= 0.001) {
             clubNetBalanceEl.textContent = amount;
             clubNetBalanceEl.className = 'text-xl font-bold text-emerald-700';
