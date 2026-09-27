@@ -61,8 +61,22 @@ test('member and guest quota payments are club credits against member expenses',
   assert.equal(result.settlementGap, -121300);
   assert.equal(result.quotaPayments, 90000);
   assert.equal(result.cash, 32500);
-  assert.equal(result.reimbursementsOwed, 223800);
+  assert.equal(result.reimbursementsOwed, 153800);
   assert.equal(result.debtToSettle, 121300);
+});
+
+test('reimbursements owed exclude amounts offset by member fees due', () => {
+  const owed = vm.runInContext(`
+    members = ['Ruso', 'Pata'];
+    movements = [
+      { persona: 'Ruso', tipo: 'gasto', monto: 223800 },
+      { persona: 'Ruso', tipo: 'cuota_jueves', monto: 70000 },
+      { persona: 'Pata', tipo: 'gasto', monto: 250000 },
+      { persona: 'Pata', tipo: 'cuota_jueves', monto: 250000 },
+    ];
+    calculatePendingReimbursements();
+  `, context);
+  assert.equal(owed, 153800);
 });
 
 test('cash and reimbursements owed are tracked separately from the settlement gap', () => {

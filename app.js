@@ -532,7 +532,7 @@ function calculateClubCashBalance(source = movements) {
 
 function calculatePendingReimbursements(source = movements) {
     return Object.values(buildMemberBalances(source))
-        .reduce((total, balance) => total + balance.debtToMember, 0);
+        .reduce((total, balance) => total + Math.max(0, balance.net), 0);
 }
 
 function sumMovementsByType(source, movementType) {
