@@ -13,7 +13,7 @@ const context = vm.createContext({ document, localStorage, console });
 const app = fs.readFileSync(path.join(__dirname, '..', 'app.js'), 'utf8');
 vm.runInContext(app, context, { filename: 'app.js' });
 
-test('club net offsets expenses by reimbursements and outstanding Thursday fees', () => {
+test('club net adds quota payments and offsets expenses by reimbursements and outstanding fees', () => {
   const net = vm.runInContext(`
     members = ['Tade', 'Pata'];
     movements = [
@@ -27,7 +27,7 @@ test('club net offsets expenses by reimbursements and outstanding Thursday fees'
     ];
     calculateClubNetBalance();
   `, context);
-  assert.equal(net, -9000);
+  assert.equal(net, -5000);
 });
 
 test('club net can show when members owe more than the club', () => {
@@ -39,7 +39,7 @@ test('club net can show when members owe more than the club', () => {
   assert.equal(net, 30000);
 });
 
-test('guest quota payments are club credits applied to member expenses', () => {
+test('member and guest quota payments are club credits against member expenses', () => {
   const result = vm.runInContext(`
     members = ['Ruso'];
     movements = [
@@ -52,11 +52,11 @@ test('guest quota payments are club credits applied to member expenses', () => {
     ];
     ({
       net: calculateClubNetBalance(),
-      guestCredit: calculateGuestQuotaCredits(),
+      quotaPayments: calculateQuotaPayments(),
       debtToSettle: calculateClubDebtToSettle(),
     });
   `, context);
-  assert.equal(result.net, -93800);
-  assert.equal(result.guestCredit, 60000);
-  assert.equal(result.debtToSettle, 93800);
+  assert.equal(result.net, -63800);
+  assert.equal(result.quotaPayments, 90000);
+  assert.equal(result.debtToSettle, 63800);
 });

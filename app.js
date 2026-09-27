@@ -499,27 +499,14 @@ function buildMemberBalances(source = movements) {
 function calculateClubNetBalance(source = movements) {
     const memberNet = Object.values(buildMemberBalances(source))
         .reduce((net, balance) => net + balance.net, 0);
-    return calculateGuestQuotaCredits(source) - memberNet;
+    return calculateQuotaPayments(source) - memberNet;
 }
 
-function calculateGuestQuotaCredits(source = movements) {
-    const cuotasByPerson = new Map();
-    source.forEach(movement => {
-        const person = (movement.persona || '').toString().trim();
-        if (!person) return;
-        const key = person.toLocaleLowerCase('es');
-        const totals = cuotasByPerson.get(key) || { issued: 0, paid: 0 };
+function calculateQuotaPayments(source = movements) {
+    return source.reduce((total, movement) => {
         const amount = parseFloat(movement.monto) || 0;
         const type = (movement.tipo || '').toString().trim().toLowerCase();
-        if (type === 'cuota_jueves') totals.issued += amount;
-        else if (type === 'pago_cuota') totals.paid += amount;
-        cuotasByPerson.set(key, totals);
-    });
-
-    return [...cuotasByPerson.entries()].reduce((credits, [person, totals]) => {
-        const isMember = members.some(member => member.toString().trim().toLocaleLowerCase('es') === person);
-        if (isMember) return credits;
-        return credits + Math.max(0, totals.paid - totals.issued);
+        return type === 'pago_cuota' ? total + amount : total;
     }, 0);
 }
 
