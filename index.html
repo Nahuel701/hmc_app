@@ -213,11 +213,15 @@
 
         <!-- TAB: DEUDAS Y REINTEGROS -->
         <div id="tabDeudas" class="space-y-6 hidden">
-            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <div>
-                    <h3 class="text-sm font-bold text-slate-800">Saldo neto del club</h3>
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <h3 class="text-sm font-bold text-slate-800">Caja del club</h3>
+                    <p id="clubCashBalance" class="text-xl font-bold text-slate-700" aria-live="polite">$0,00</p>
                 </div>
-                <p id="clubNetBalance" class="text-xl font-bold text-slate-700" aria-live="polite">$0.00</p>
+                <div class="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                    <h4 class="text-sm font-medium text-slate-500">Reintegros adeudados</h4>
+                    <p id="pendingReimbursements" class="text-sm font-semibold text-rose-600" aria-live="polite">$0,00</p>
+                </div>
             </div>
 
             <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
@@ -543,6 +547,6 @@
 
     </main>
 
-    <script src="app.js?v=saldo-neto-cuotas-todas-9551982"></script>
+    <script src="app.js?v=caja-y-reintegros-30c8f42"></script>
 </body>
 </html>

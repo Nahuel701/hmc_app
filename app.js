@@ -496,17 +496,50 @@ function buildMemberBalances(source = movements) {
     return balances;
 }
 
-function calculateClubNetBalance(source = movements) {
-    const memberNet = Object.values(buildMemberBalances(source))
-        .reduce((net, balance) => net + balance.net, 0);
-    return calculateQuotaPayments(source) - memberNet;
+function calculateClubSettlementGap(source = movements) {
+    const memberAccounts = new Map();
+    source.forEach(movement => {
+        const person = (movement.persona || '').toString().trim();
+        if (!person) return;
+        const type = (movement.tipo || '').toString().trim().toLowerCase();
+        const amount = parseFloat(movement.monto) || 0;
+        const account = memberAccounts.get(person) || { expenses: 0, feesIssued: 0, feesPaid: 0 };
+        if (type === 'gasto') account.expenses += amount;
+        else if (type === 'cuota_jueves') account.feesIssued += amount;
+        else if (type === 'pago_cuota') account.feesPaid += amount;
+        memberAccounts.set(person, account);
+    });
+
+    const memberNames = new Set(members.map(name => name.toString().trim().toLocaleLowerCase('es')));
+    const netMemberExpenses = [...memberAccounts.entries()].reduce((net, [person, account]) => {
+        const isMember = memberNames.has(person.toLocaleLowerCase('es'));
+        const outstandingFees = isMember
+            ? Math.max(0, account.feesIssued - account.feesPaid)
+            : 0;
+        return net + account.expenses - outstandingFees;
+    }, 0);
+
+    return calculateQuotaPayments(source) - netMemberExpenses;
 }
 
 function calculateQuotaPayments(source = movements) {
+    return sumMovementsByType(source, 'pago_cuota');
+}
+
+function calculateClubCashBalance(source = movements) {
+    return calculateQuotaPayments(source) - sumMovementsByType(source, 'reintegro');
+}
+
+function calculatePendingReimbursements(source = movements) {
+    return Object.values(buildMemberBalances(source))
+        .reduce((total, balance) => total + balance.debtToMember, 0);
+}
+
+function sumMovementsByType(source, movementType) {
     return source.reduce((total, movement) => {
         const amount = parseFloat(movement.monto) || 0;
         const type = (movement.tipo || '').toString().trim().toLowerCase();
-        return type === 'pago_cuota' ? total + amount : total;
+        return type === movementType ? total + amount : total;
     }, 0);
 }
 
@@ -515,7 +548,8 @@ function renderApp() {
     const memberBadge = document.getElementById('memberCountBadge');
     const summaryBody = document.getElementById('debtsSummaryTableBody');
     const historyBody = document.getElementById('debtsTableBody');
-    const clubNetBalanceEl = document.getElementById('clubNetBalance');
+    const clubCashBalanceEl = document.getElementById('clubCashBalance');
+    const pendingReimbursementsEl = document.getElementById('pendingReimbursements');
     if (!personaSelect) return;
 
     personaSelect.innerHTML = '';
@@ -550,19 +584,14 @@ function renderApp() {
     }
 
     const balances = buildMemberBalances();
-    const clubNet = calculateClubNetBalance();
-    if (clubNetBalanceEl) {
-        const amount = `${clubNet < -0.001 ? '-$' : '$'}${Math.abs(clubNet).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-        if (Math.abs(clubNet) <= 0.001) {
-            clubNetBalanceEl.textContent = amount;
-            clubNetBalanceEl.className = 'text-xl font-bold text-emerald-700';
-        } else if (clubNet > 0) {
-            clubNetBalanceEl.textContent = amount;
-            clubNetBalanceEl.className = 'text-xl font-bold text-indigo-700';
-        } else {
-            clubNetBalanceEl.textContent = amount;
-            clubNetBalanceEl.className = 'text-xl font-bold text-rose-700';
-        }
+    const clubCash = calculateClubCashBalance();
+    if (clubCashBalanceEl) {
+        const amount = `${clubCash < -0.001 ? '-$' : '$'}${Math.abs(clubCash).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        clubCashBalanceEl.textContent = amount;
+        clubCashBalanceEl.className = `text-xl font-bold ${clubCash < -0.001 ? 'text-rose-700' : 'text-indigo-700'}`;
+    }
+    if (pendingReimbursementsEl) {
+        pendingReimbursementsEl.textContent = `$${calculatePendingReimbursements().toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     }
 
     if (summaryBody) {
@@ -1277,7 +1306,7 @@ function getAttendeesForDate(targetDate) {
 }
 
 function calculateClubDebtToSettle() {
-    return Math.max(0, -calculateClubNetBalance());
+    return Math.max(0, -calculateClubSettlementGap());
 }
 
 function calculateSuggestedQuota(totalDebt, attendeeCount) {
